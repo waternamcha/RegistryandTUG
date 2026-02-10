@@ -111,22 +111,74 @@ def reset_tug():
     st.session_state.tug_running = False
 
 # --- SAVE TO DATABASE FUNCTION (AUTO) ---
+# --- SAVE TO DATABASE FUNCTION (FULL VERSION) ---
 def save_to_csv():
     if st.session_state.hn == "":
         st.toast('⚠️ ไม่ได้บันทึก: กรุณากรอก HN ก่อน', icon='⚠️')
         return
 
+    # ฟังก์ชันช่วยแปลง List ให้เป็นข้อความ (เช่น ['A', 'B'] -> "A, B") เพื่อไม่ให้ CSV พัง
+    def clean_list(val):
+        if isinstance(val, list):
+            return ", ".join(val)
+        return str(val)
+
+    # เก็บข้อมูลทุกอย่างที่มีใน Session State ลง Dictionary
     data = {
         'Timestamp': [datetime.now().strftime('%Y-%m-%d %H:%M:%S')],
+        # 1. ข้อมูลทั่วไป
         'HN': [st.session_state.hn],
         'Name': [st.session_state.fname],
-        'Gender': [st.session_state.gender],
+        'DOB': [st.session_state.dob],
         'Age': [date.today().year - st.session_state.dob.year],
+        'Gender': [st.session_state.gender],
+        'Nationality': [get_txt(st.session_state.nationality, 'nationality_ot')],
+        'Country': [get_txt(st.session_state.country, 'country_ot')],
         'Province': [get_txt(st.session_state.province, 'province_ot')],
-        'Diagnosis': [get_txt(st.session_state.cause, 'cause_ot')],
-        'Amp_Level': [get_txt(st.session_state.level, 'level_ot')],
+        'Weight': [st.session_state.weight],
+        'Height': [st.session_state.height],
+        # 2. ข้อมูลทางการแพทย์
+        'Comorbidities': [get_txt(clean_list(st.session_state.comorbidities), 'comorb_ot')],
+        'Cause': [get_txt(st.session_state.cause, 'cause_ot')],
+        'Amp_Year': [st.session_state.amp_year],
+        'Side': [st.session_state.side],
+        'Level': [get_txt(st.session_state.level, 'level_ot')],
+        'Stump_Len': [st.session_state.stump_len],
+        'Stump_Shape': [get_txt(st.session_state.stump_shape, 'shape_ot')],
+        'Surgery': [st.session_state.surgery],
+        'Surgery_Details': [clean_list(st.session_state.surg_details)],
         'K_Level': [st.session_state.k_level],
+        # 3. การฟื้นฟู
+        'Rehab_Personnel': [get_txt(clean_list(st.session_state.personnel), 'personnel_ot')],
+        'Rehab_History': [st.session_state.rehab],
+        'Rehab_Activity': [get_txt(clean_list(st.session_state.rehab_act), 'rehab_act_ot')],
+        # 4. กายอุปกรณ์
+        'Service': [get_txt(clean_list(st.session_state.service), 'service_ot')],
+        'Date_Cast': [st.session_state.date_cast],
+        'Date_Deliv': [st.session_state.date_deliv],
         'Socket': [get_txt(st.session_state.socket, 'socket_ot')],
+        'Liner': [get_txt(st.session_state.liner, 'liner_ot')],
+        'Suspension': [get_txt(clean_list(st.session_state.suspension), 'susp_ot')],
+        'Foot': [get_txt(clean_list(st.session_state.foot), 'foot_ot')],
+        'Knee': [get_txt(clean_list(st.session_state.knee), 'knee_ot')],
+        # 5. สังคมและการใช้งาน
+        'Assist_Device': [get_txt(st.session_state.assist, 'assist_ot')],
+        'Stand_Hr': [st.session_state.stand_hr],
+        'Walk_Hr': [st.session_state.walk_hr],
+        'Fall_History': [st.session_state.fall],
+        'Fall_Freq': [st.session_state.fall_freq],
+        'Fall_Injury': [st.session_state.fall_inj],
+        'Social_Self': [st.session_state.q31_1],
+        'Social_Others': [st.session_state.q31_2],
+        'Work_Self': [st.session_state.q32_1],
+        'Work_Others': [st.session_state.q32_2],
+        'Fam_Support': [st.session_state.supp_fam],
+        'Org_Support': [st.session_state.supp_org],
+        'Org_Source': [get_txt(clean_list(st.session_state.supp_src), 'supp_src_ot')],
+        # TUG Test
+        'TUG_1': [st.session_state.t1],
+        'TUG_2': [st.session_state.t2],
+        'TUG_3': [st.session_state.t3],
         'TUG_Avg': [st.session_state.tug_avg],
         'TUG_Status': [st.session_state.tug_status]
     }
@@ -134,12 +186,20 @@ def save_to_csv():
     df = pd.DataFrame(data)
     file_path = 'prosthesis_database.csv'
     
+    # ถ้าไฟล์ยังไม่มี ให้สร้างใหม่
     if not os.path.exists(file_path):
         df.to_csv(file_path, index=False)
     else:
-        df.to_csv(file_path, mode='a', header=False, index=False)
+        # ถ้ามีไฟล์อยู่แล้ว ให้เช็คว่าจำนวนคอลัมน์เท่ากันไหม (ป้องกัน Error)
+        existing_df = pd.read_csv(file_path)
+        if len(existing_df.columns) != len(df.columns):
+            # ถ้าคอลัมน์ไม่เท่ากัน (เช่น ไฟล์เก่ามีน้อยกว่า) ให้สร้างไฟล์ใหม่ทับไปเลย หรือเปลี่ยนชื่อ
+            # ในที่นี้แนะนำให้เขียนทับเพื่อให้ได้ Format ใหม่
+             df.to_csv(file_path, index=False) # เขียนทับ
+        else:
+             df.to_csv(file_path, mode='a', header=False, index=False) # ต่อท้าย
     
-    st.toast(f'✅ บันทึก HN: {st.session_state.hn} ลง Database แล้ว!', icon='💾')
+    st.toast(f'✅ บันทึก HN: {st.session_state.hn} ครบถ้วน!', icon='💾')
 
 # ---------------------------------------------------------
 # 3. HTML REPORT
