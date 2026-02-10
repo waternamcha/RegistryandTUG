@@ -50,65 +50,69 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# 2. SESSION STATE MANAGEMENT
+# 2. SESSION STATE MANAGEMENT (ROBUST VERSION)
 # ---------------------------------------------------------
-if 'init' not in st.session_state:
-    defaults = {
-        # 1. General
-        'hn': '', 'fname': '', 'dob': date(1980, 1, 1), 'age': 0, 'gender': 'ชาย', 
-        'country': 'Thailand', 'country_ot': '',
-        'province': 'กรุงเทพมหานคร', 'province_ot': '',
-        'nationality': 'ไทย', 'nationality_ot': '',
-        'weight': 0.0, 'height': 0.0,
-        # 2. Medical
-        'comorbidities': [], 'comorb_ot': '',
-        'cause': 'อุบัติเหตุ', 'cause_ot': '',
-        'amp_year': 2560, 'side': 'ขวา', 'level': 'Transtibial', 'level_ot': '',
-        'stump_len': 'ปานกลาง', 'stump_shape': 'Cylindrical', 'shape_ot': '',
-        'surgery': 'ไม่ใช่', 'surg_details': [], 'k_level': 'K1',
-        # 3. Rehab
-        'personnel': [], 'personnel_ot': '',
-        'rehab': 'ไม่เคย', 'rehab_act': [], 'rehab_act_ot': '',
-        # 4. Prosthesis
-        'service': [], 'service_ot': '',
-        'date_cast': date.today(), 'date_deliv': date.today(),
-        'socket': 'PTB', 'socket_ot': '',
-        'liner': 'None', 'liner_ot': '',
-        'suspension': [], 'susp_ot': '',
-        'foot': [], 'foot_ot': '',
-        'knee': [], 'knee_ot': '', 
-        # 5. Social
-        'assist': 'ไม่ใช้', 'assist_ot': '',
-        'stand_hr': '1-3 ชั่วโมง', 'walk_hr': '1-3 ชั่วโมง',
-        'fall': 'ไม่', 'fall_freq': '', 'fall_inj': 'ไม่',
-        'q31_1': 'ไม่มีปัญหา (0-4%)', 'q31_2': 'ไม่มีปัญหา (0-4%)',
-        'q32_1': 'ไม่มีปัญหา (0-4%)', 'q32_2': 'ไม่มีปัญหา (0-4%)',
-        'supp_fam': 'ใช่', 'supp_org': 'ไม่ใช่', 'supp_src': [], 'supp_src_ot': '',
-        # TUG
-        'tug_running': False, 'start_time': None,
-        't1': 0.0, 't2': 0.0, 't3': 0.0, 'tug_avg': 0.0, 'tug_status': '-'
-    }
-    for k, v in defaults.items():
-        if k not in st.session_state:
-            st.session_state[k] = v
-    st.session_state.init = True
+# กำหนดค่าเริ่มต้นทั้งหมด
+defaults = {
+    # 1. General
+    'hn': '', 'fname': '', 'dob': date(1980, 1, 1), 'age': 0, 'gender': 'ชาย', 
+    'country': 'Thailand', 'country_ot': '',
+    'province': 'กรุงเทพมหานคร', 'province_ot': '',
+    'nationality': 'ไทย', 'nationality_ot': '',
+    'weight': 0.0, 'height': 0.0,
+    # 2. Medical
+    'comorbidities': [], 'comorb_ot': '',
+    'cause': 'อุบัติเหตุ', 'cause_ot': '',
+    'amp_year': 2560, 'side': 'ขวา', 'level': 'Transtibial', 'level_ot': '',
+    'stump_len': 'ปานกลาง', 'stump_shape': 'Cylindrical', 'shape_ot': '',
+    'surgery': 'ไม่ใช่', 'surg_details': [], 'k_level': 'K1',
+    # 3. Rehab
+    'personnel': [], 'personnel_ot': '',
+    'rehab': 'ไม่เคย', 'rehab_act': [], 'rehab_act_ot': '',
+    # 4. Prosthesis
+    'service': [], 'service_ot': '',
+    'date_cast': date.today(), 'date_deliv': date.today(),
+    'socket': 'PTB', 'socket_ot': '',
+    'liner': 'None', 'liner_ot': '',
+    'suspension': [], 'susp_ot': '',
+    'foot': [], 'foot_ot': '',
+    'knee': [], 'knee_ot': '', 
+    # 5. Social
+    'assist': 'ไม่ใช้', 'assist_ot': '',
+    'stand_hr': '1-3 ชั่วโมง', 'walk_hr': '1-3 ชั่วโมง',
+    'fall': 'ไม่', 'fall_freq': '', 'fall_inj': 'ไม่',
+    'q31_1': 'ไม่มีปัญหา (0-4%)', 'q31_2': 'ไม่มีปัญหา (0-4%)',
+    'q32_1': 'ไม่มีปัญหา (0-4%)', 'q32_2': 'ไม่มีปัญหา (0-4%)',
+    'supp_fam': 'ใช่', 'supp_org': 'ไม่ใช่', 'supp_src': [], 'supp_src_ot': '',
+    # TUG (ตัวแปรเจ้าปัญหา ต้อง Init ให้ครบ)
+    'tug_running': False, 'start_time': None,
+    't1': 0.0, 't2': 0.0, 't3': 0.0, 'tug_avg': 0.0, 'tug_status': '-'
+}
+
+# วนลูปตรวจสอบทุกตัวแปร ถ้าตัวไหนหายไป (เช่น t1) ให้สร้างใหม่ทันที
+for k, v in defaults.items():
+    if k not in st.session_state:
+        st.session_state[k] = v
 
 # Helper Functions
 def get_txt(val, ot_key):
-    # Helper to handle "Other" and List types safely
+    # Handle List Types (ป้องกันการแสดง [])
     if isinstance(val, list):
+        if not val: # ถ้า List ว่าง
+            return "-"
         text = ", ".join(val)
         if ("Other" in val or "อื่นๆ" in val) and ot_key in st.session_state:
             text += f" ({st.session_state[ot_key]})"
-        return text if text else "-"
+        return text
     
+    # Handle String/Other Types
     if (val == "Other" or val == "อื่นๆ") and ot_key in st.session_state:
         return f"{val} ({st.session_state[ot_key]})"
     return str(val) if val else "-"
 
 def calculate_tug():
-    # Filter only valid times > 0
-    times = [t for t in [st.session_state.t1, st.session_state.t2, st.session_state.t3] if t > 0.001]
+    # Filter only valid times > 0.01 (ป้องกันค่า 0 มาคำนวณ)
+    times = [t for t in [st.session_state.t1, st.session_state.t2, st.session_state.t3] if t > 0.01]
     if times:
         avg = sum(times) / len(times)
         st.session_state.tug_avg = avg
@@ -133,6 +137,13 @@ def create_html():
     age_calc = date.today().year - st.session_state.dob.year
     date_cast_str = st.session_state.date_cast.strftime('%d/%m/%Y')
     date_deliv_str = st.session_state.date_deliv.strftime('%d/%m/%Y')
+
+    # ใช้ .get() เพื่อป้องกัน KeyError หาก Session State มีปัญหาจริงๆ
+    t1_val = st.session_state.get('t1', 0.0)
+    t2_val = st.session_state.get('t2', 0.0)
+    t3_val = st.session_state.get('t3', 0.0)
+    avg_val = st.session_state.get('tug_avg', 0.0)
+    status_val = st.session_state.get('tug_status', '-')
 
     html = f"""
     <!DOCTYPE html>
@@ -221,9 +232,9 @@ def create_html():
 
         <div class="tug-box">
             <h3 style="margin:0;">TUG Test Result</h3>
-            <h1 style="margin:5px 0; font-size:2em;">{st.session_state.tug_avg:.2f} s</h1>
-            <h3 style="color:{'#C0392B' if st.session_state.tug_avg >= 13.5 else '#27AE60'}; margin:0;">{st.session_state.tug_status}</h3>
-            <p style="font-size:0.9em; margin-top:5px; color:#666;">(Trial 1: {st.session_state.t1:.2f} | Trial 2: {st.session_state.t2:.2f} | Trial 3: {st.session_state.t3:.2f})</p>
+            <h1 style="margin:5px 0; font-size:2em;">{avg_val:.2f} s</h1>
+            <h3 style="color:{'#C0392B' if avg_val >= 13.5 else '#27AE60'}; margin:0;">{status_val}</h3>
+            <p style="font-size:0.9em; margin-top:5px; color:#666;">(Trial 1: {t1_val:.2f} | Trial 2: {t2_val:.2f} | Trial 3: {t3_val:.2f})</p>
         </div>
     </body>
     </html>
@@ -443,7 +454,7 @@ with tab2:
         st.markdown(f'<div class="tug-display">{elapsed:.2f} s</div>', unsafe_allow_html=True)
         if st.button("⏹️ STOP", type="primary", use_container_width=True):
             st.session_state.tug_running = False
-            fin = round(elapsed, 2) # ปัดเศษ 2 ตำแหน่ง
+            fin = round(elapsed, 2)
             if st.session_state.t1 <= 0.01: st.session_state.t1 = fin
             elif st.session_state.t2 <= 0.01: st.session_state.t2 = fin
             elif st.session_state.t3 <= 0.01: st.session_state.t3 = fin
@@ -459,7 +470,6 @@ with tab2:
             st.rerun()
     st.markdown("---")
     
-    # [FIX] เพิ่ม step=0.01 เพื่อรองรับทศนิยม ไม่งั้นค่าจะหาย
     c1, c2, c3 = st.columns(3)
     st.number_input("Trial 1", key="t1", on_change=calculate_tug, step=0.01, format="%.2f")
     st.number_input("Trial 2", key="t2", on_change=calculate_tug, step=0.01, format="%.2f")
