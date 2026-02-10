@@ -4,52 +4,87 @@ import io
 from datetime import datetime, date
 
 # ---------------------------------------------------------
-# 1. SETUP & STYLING (Clean & Minimal)
+# 1. SETUP & MODERN UI STYLING
 # ---------------------------------------------------------
 st.set_page_config(page_title="Prosthesis Registry", layout="wide", page_icon="🦿")
 
 st.markdown("""
     <style>
-    /* Import Font */
-    @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600&display=swap');
+    /* Import Google Font: Sarabun */
+    @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap');
     
+    /* Global Font Setting */
     html, body, [class*="css"] {
         font-family: 'Sarabun', sans-serif;
     }
 
-    /* TUG Timer Display - ปรับให้เด่นชัด */
+    /* 1. Main Title Styling (จัดกึ่งกลาง) */
+    .main-title {
+        text-align: center;
+        font-size: 2.8em;
+        font-weight: 700;
+        color: #154360; /* สีน้ำเงินเข้ม */
+        margin-top: -20px;
+        margin-bottom: 5px;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+    }
+    
+    .sub-title {
+        text-align: center;
+        font-size: 1.2em;
+        color: #5D6D7E;
+        margin-bottom: 30px;
+    }
+
+    /* 2. TUG Timer Display */
     .tug-display { 
-        font-size: 80px; 
+        font-size: 90px; 
         font-weight: 700; 
         color: #2E86C1; 
         text-align: center; 
-        background-color: #f0f8ff; 
-        padding: 40px; 
+        background-color: #f4f6f7; 
+        padding: 30px; 
         border-radius: 20px; 
         margin-bottom: 20px;
         font-family: 'Courier New', monospace;
-        border: 2px solid #d6eaf8;
+        border: 3px solid #d6eaf8;
+        box-shadow: inset 0 0 10px rgba(0,0,0,0.05);
     }
     
-    /* Result Box */
+    /* 3. Result Box */
     .result-box {
-        padding: 20px; border-radius: 12px; text-align: center; 
-        color: white; font-weight: bold; font-size: 1.2em;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        margin-top: 10px;
+        padding: 25px; 
+        border-radius: 15px; 
+        text-align: center; 
+        color: white; 
+        font-weight: bold; 
+        font-size: 1.3em;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        margin-top: 15px;
     }
 
-    /* ปรับแต่ง Expander ให้ดูหนาขึ้นเล็กน้อย */
+    /* 4. Expander Styling (ปรับหัวข้อให้สวย) */
     .streamlit-expanderHeader {
-        font-weight: bold;
-        color: #154360;
-        background-color: #f8f9fa;
-        border-radius: 5px;
+        font-size: 1.1em;
+        font-weight: 600;
+        color: #1F618D;
+        background-color: #ffffff;
+        border: 1px solid #eee;
+        border-radius: 8px;
+    }
+    
+    /* 5. Input Fields Styling */
+    .stTextInput>div>div>input {
+        border-radius: 8px;
+    }
+    .stSelectbox>div>div>div {
+        border-radius: 8px;
     }
 
-    /* Hide Streamlit default menu */
+    /* Hide Streamlit Default Elements */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
+    header {visibility: hidden;} /* ซ่อนแถบสีรุ้งด้านบน */
     </style>
 """, unsafe_allow_html=True)
 
@@ -229,10 +264,13 @@ def create_html():
 # ---------------------------------------------------------
 # 4. APP LAYOUT
 # ---------------------------------------------------------
-st.title("🏥 Prosthesis Registry & OM Platform")
+
+# ส่วนหัวข้อหลัก (Header)
+st.markdown('<div class="main-title">🏥 Digital Prosthesis Registry</div>', unsafe_allow_html=True)
+st.markdown('<div class="sub-title">ระบบบันทึกข้อมูลกายอุปกรณ์และทดสอบการเดิน (OM Platform)</div>', unsafe_allow_html=True)
 
 # Sidebar
-st.sidebar.markdown("### 📥 Report")
+st.sidebar.markdown("### 📥 Report Management")
 html_data = create_html()
 st.sidebar.download_button(
     "💾 Download HTML Report",
