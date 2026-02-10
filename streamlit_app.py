@@ -1,6 +1,8 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import time
 from datetime import datetime
+import io 
 
 # =========================================================
 # ⚙️ CONFIG & CSS
@@ -9,14 +11,12 @@ st.set_page_config(page_title="Prosthesis Registry & TUG", page_icon="🦿", lay
 
 st.markdown("""
     <style>
-    /* Metric Style */
     div[data-testid="stMetricValue"] {
         font-size: 80px !important;
         font-family: 'Courier New', monospace;
         color: #1F618D;
         font-weight: bold;
     }
-    /* TUG Box */
     .tug-box {
         border: 2px solid #ddd;
         padding: 20px;
@@ -36,48 +36,23 @@ st.markdown("""
 # 📦 SESSION STATE SETUP
 # =========================================================
 defaults = {
-    # TUG System
-    'is_running': False, 
-    'start_time': 0.0, 
-    'elapsed_time': 0.0,
-    
-    # 1. General
+    'is_running': False, 'start_time': 0.0, 'elapsed_time': 0.0,
     'hn': '', 'fname': '', 'birth_year': 2520, 'gender': 'ชาย', 
     'weight': 0.0, 'height': 0.0, 'nationality': 'ไทย', 'nat_ot': '',
     'country': 'Thailand', 'cnt_ot': '', 'province': 'กรุงเทพมหานคร',
-    
-    # 2. Medical
-    'comorbidities': [], 'comorb_ot': '',
-    'cause': 'อุบัติเหตุ', 'cause_ot': '',
-    'amp_year': 2566, 'side': 'ขวา',
-    'amp_level': 'Transtibial', 'level_ot': '',
+    'comorbidities': [], 'comorb_ot': '', 'cause': 'อุบัติเหตุ', 'cause_ot': '',
+    'amp_year': 2566, 'side': 'ขวา', 'amp_level': 'Transtibial', 'level_ot': '',
     'stump_len': 'ปานกลาง', 'stump_shape': 'Cylindrical', 'shape_ot': '',
-    'surgery': 'ไม่ใช่', 'surg_details': [], 'surg_ot': '',
-    'k_level': 'K3',
-    
-    # 3. Rehab
-    'personnel': [], 'pers_ot': '',
-    'rehab_status': 'ไม่เคย', 'activities': [], 'act_ot': '',
-    
-    # 4. Prosthesis
-    'service': [], 'serv_ot': '',
-    'date_cast': datetime.now().date(), 'date_deliv': datetime.now().date(),
-    'socket': 'PTB', 'sock_ot': '',
-    'liner': [], 'liner_ot': '',
-    'suspension': [], 'susp_ot': '',
-    'foot': [], 'foot_ot': '',
-    'knee': [], 'knee_ot': '',
-    
-    # 5. Social & Function
-    'assist': 'ไม่ใช้', 'asst_ot': '',
-    'stand_hours': '1-3 ชม.', 'walk_hours': '1-3 ชม.',
+    'surgery': 'ไม่ใช่', 'surg_details': [], 'surg_ot': '', 'k_level': 'K3',
+    'personnel': [], 'pers_ot': '', 'rehab_status': 'ไม่เคย', 'activities': [], 'act_ot': '',
+    'service': [], 'serv_ot': '', 'date_cast': datetime.now().date(), 'date_deliv': datetime.now().date(),
+    'socket': 'PTB', 'sock_ot': '', 'liner': [], 'liner_ot': '',
+    'suspension': [], 'susp_ot': '', 'foot': [], 'foot_ot': '', 'knee': [], 'knee_ot': '',
+    'assist': 'ไม่ใช้', 'asst_ot': '', 'stand_hours': '1-3 ชม.', 'walk_hours': '1-3 ชม.',
     'fall_hist': 'ไม่มี', 'fall_freq': '1-2 ครั้ง', 'fall_inj': False,
     'q31_1': 'ไม่มีปัญหา (0-4%)', 'q31_2': 'ไม่มีปัญหา (0-4%)', 
     'q32_1': 'ไม่มีปัญหา (0-4%)', 'q32_2': 'ไม่มีปัญหา (0-4%)',
-    'supp_family': 'ใช่', 
-    'supp_org': 'ไม่ใช่', 'supp_sources': [], 'supp_ot': '',
-    
-    # TUG Results
+    'supp_family': 'ใช่', 'supp_org': 'ไม่ใช่', 'supp_sources': [], 'supp_ot': '',
     't1': 0.0, 't2': 0.0, 't3': 0.0, 'tug_avg': 0.0
 }
 
@@ -85,7 +60,6 @@ for key, val in defaults.items():
     if key not in st.session_state:
         st.session_state[key] = val
 
-# Helper to get text safely
 def get_val(key, other_key=None):
     val = st.session_state[key]
     if isinstance(val, list):
@@ -99,21 +73,14 @@ def get_val(key, other_key=None):
         return str(val)
 
 # =========================================================
-# 📄 HTML REPORT GENERATOR (FOR PDF)
+# 📄 REPORT GENERATOR
 # =========================================================
-def create_html_report():
-    # Logic: Fall History Text
-    fall_txt = "ไม่มี"
-    if st.session_state.fall_hist == "มี":
-        inj = "บาดเจ็บ" if st.session_state.fall_inj else "ไม่เจ็บ"
-        fall_txt = f"มี ({st.session_state.fall_freq}) - {inj}"
-
-    # Logic: Knee
+def create_html_content():
+    # Logic
     knee_row = ""
     if st.session_state.amp_level in ["Transfemoral", "Knee Disarticulation", "Other"]:
         knee_row = f"<tr><td><b>Knee (ข้อเข่า):</b></td><td>{get_val('knee', 'knee_ot')}</td></tr>"
 
-    # Logic: TUG Result
     tug_res = "NORMAL" if st.session_state.tug_avg < 13.5 else "HIGH RISK"
     tug_color = "green" if st.session_state.tug_avg < 13.5 else "red"
 
@@ -122,27 +89,23 @@ def create_html_report():
     <head>
         <title>Report_{st.session_state.hn}</title>
         <style>
-            body {{ font-family: 'Sarabun', sans-serif; padding: 40px; }}
-            h1 {{ text-align: center; color: #2C3E50; }}
-            h2 {{ color: #1F618D; border-bottom: 2px solid #ddd; padding-bottom: 5px; margin-top: 30px; }}
-            table {{ width: 100%; border-collapse: collapse; margin-bottom: 10px; }}
-            td {{ padding: 8px; vertical-align: top; border-bottom: 1px solid #eee; }}
+            body {{ font-family: 'Sarabun', sans-serif; padding: 20px; }}
+            h1 {{ text-align: center; color: #2C3E50; margin-bottom: 10px; }}
+            h2 {{ color: #1F618D; border-bottom: 2px solid #ddd; padding-bottom: 5px; margin-top: 20px; font-size: 18px; }}
+            table {{ width: 100%; border-collapse: collapse; margin-bottom: 5px; font-size: 14px; }}
+            td {{ padding: 6px; vertical-align: top; border-bottom: 1px solid #eee; }}
             td:first-child {{ font-weight: bold; width: 35%; color: #555; }}
             .tug-result {{ 
-                text-align: center; border: 3px solid {tug_color}; padding: 15px; 
-                margin-top: 20px; border-radius: 10px; color: {tug_color};
-            }}
-            @media print {{
-                .no-print {{ display: none; }}
+                text-align: center; border: 2px solid {tug_color}; padding: 10px; 
+                margin-top: 15px; border-radius: 10px; color: {tug_color};
             }}
         </style>
         <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
     </head>
-    <body onload="window.print()">
+    <body>
         <div style="text-align:right; font-size: 0.8em; color: gray;">
             Printed: {datetime.now().strftime('%d/%m/%Y %H:%M')}
         </div>
-
         <h1>📄 รายงานประวัติผู้ใช้ขาเทียม</h1>
         
         <h2>1. ข้อมูลทั่วไป (General)</h2>
@@ -151,70 +114,84 @@ def create_html_report():
             <tr><td>ชื่อ-สกุล:</td><td>{st.session_state.fname}</td></tr>
             <tr><td>เพศ / อายุ:</td><td>{st.session_state.gender} / {datetime.now().year + 543 - st.session_state.birth_year} ปี</td></tr>
             <tr><td>ที่อยู่:</td><td>{st.session_state.province}, {get_val('country', 'cnt_ot')}</td></tr>
-            <tr><td>สัญชาติ:</td><td>{get_val('nationality', 'nat_ot')}</td></tr>
         </table>
 
         <h2>2. ข้อมูลทางการแพทย์ (Medical)</h2>
         <table>
             <tr><td>โรคประจำตัว:</td><td>{get_val('comorbidities', 'comorb_ot')}</td></tr>
-            <tr><td>สาเหตุ/ระดับการตัด:</td><td>{get_val('cause', 'cause_ot')} / {get_val('amp_level', 'level_ot')} ({st.session_state.side})</td></tr>
+            <tr><td>สาเหตุ/ระดับ:</td><td>{get_val('cause', 'cause_ot')} / {get_val('amp_level', 'level_ot')} ({st.session_state.side})</td></tr>
             <tr><td>ลักษณะตอขา:</td><td>{st.session_state.stump_len}, {get_val('stump_shape', 'shape_ot')}</td></tr>
-            <tr><td>K-Level:</td><td>{st.session_state.k_level}</td></tr>
         </table>
 
         <h2>3. กายอุปกรณ์ (Prosthesis)</h2>
         <table>
             <tr><td>บริการ:</td><td>{get_val('service', 'serv_ot')}</td></tr>
-            <tr><td>วันรับบริการ:</td><td>หล่อแบบ: {st.session_state.date_cast} | รับขา: {st.session_state.date_deliv}</td></tr>
-            <tr><td>Socket / Liner:</td><td>{get_val('socket', 'sock_ot')} / {get_val('liner', 'liner_ot')}</td></tr>
-            <tr><td>Suspension:</td><td>{get_val('suspension', 'susp_ot')}</td></tr>
-            <tr><td>Foot:</td><td>{get_val('foot', 'foot_ot')}</td></tr>
+            <tr><td>วันที่:</td><td>หล่อแบบ: {st.session_state.date_cast} | รับขา: {st.session_state.date_deliv}</td></tr>
+            <tr><td>Comp:</td><td>S: {get_val('socket', 'sock_ot')} / L: {get_val('liner', 'liner_ot')}</td></tr>
+            <tr><td>Comp:</td><td>Sus: {get_val('suspension', 'susp_ot')} / F: {get_val('foot', 'foot_ot')}</td></tr>
             {knee_row}
         </table>
 
         <h2>4. ผลการเดิน (TUG Test)</h2>
         <table>
-            <tr><td>Trial 1-3:</td><td>{st.session_state.t1}, {st.session_state.t2}, {st.session_state.t3} วินาที</td></tr>
+            <tr><td>Trial 1-3:</td><td>{st.session_state.t1}, {st.session_state.t2}, {st.session_state.t3} s</td></tr>
         </table>
-        
         <div class="tug-result">
-            <h2>Average: {st.session_state.tug_avg:.2f} sec</h2>
-            <h1>{tug_res}</h1>
+            <h3>Avg: {st.session_state.tug_avg:.2f} sec | {tug_res}</h3>
         </div>
-
-        <div style="margin-top: 50px; text-align: center; color: gray; font-size: 0.8em;">
-            --- End of Report ---
-        </div>
+        
+        <script>
+            window.print();
+        </script>
     </body>
     </html>
     """
     return html
 
 # =========================================================
-# 📱 APP LAYOUT
+# 📱 APP UI
 # =========================================================
 
 st.sidebar.title("🦿 เมนูหลัก")
-st.sidebar.info("💡 วิธีบันทึก PDF: \n1. กดปุ่มดาวน์โหลดด้านล่าง \n2. เปิดไฟล์ที่ได้ \n3. หน้าต่างพิมพ์จะเด้งขึ้นมา \n4. เลือก 'Save as PDF'")
 
-# ปุ่มดาวน์โหลดแบบใหม่ (HTML)
-if st.sidebar.button("🖨️ สร้างรายงาน (PDF)"):
+# --- ปุ่ม PRINT แบบใหม่ (Preview & Print) ---
+st.sidebar.markdown("---")
+st.sidebar.header("🖨️ พิมพ์รายงาน")
+
+# วิธีที่ 1: กดปุ่มแล้วแสดงตัวอย่างพร้อมพิมพ์ทันที (แนะนำ!)
+if st.sidebar.button("👁️ แสดงตัวอย่าง & สั่งพิมพ์", type="primary"):
     if not st.session_state.hn:
         st.sidebar.error("⚠️ กรุณากรอก HN ก่อน")
     else:
-        html_data = create_html_report()
+        # สร้าง HTML
+        html_code = create_html_content()
+        # ใช้ components.html แสดงผลลัพธ์โดยตรง (ตัดปัญหา download error)
+        st.markdown("### 📄 ตัวอย่างรายงาน (หน้าต่างพิมพ์จะเด้งขึ้นมาเอง)")
+        components.html(html_code, height=800, scrolling=True)
+
+st.sidebar.markdown("---")
+
+# วิธีที่ 2: ดาวน์โหลดไฟล์ (เผื่ออยากเก็บไฟล์) - แก้ BUG แล้ว
+if st.sidebar.button("💾 ดาวน์โหลดไฟล์ HTML"):
+    if not st.session_state.hn:
+        st.sidebar.error("⚠️ กรุณากรอก HN ก่อน")
+    else:
+        html_code = create_html_content()
+        # 🔥 จุดแก้สำคัญ: แปลง String เป็น BytesIO เพื่อป้องกัน Error 'File not available'
+        file_buffer = io.BytesIO(html_code.encode('utf-8'))
         st.sidebar.download_button(
-            label="⬇️ คลิกเพื่อดาวน์โหลดรายงาน",
-            data=html_data,
+            label="⬇️ คลิกเพื่อบันทึกไฟล์",
+            data=file_buffer,
             file_name=f"Report_{st.session_state.hn}.html",
             mime="text/html"
         )
+
 
 # TABS
 tab1, tab2 = st.tabs(["📝 กรอกข้อมูล (Registry)", "⏱️ จับเวลา (TUG Test)"])
 
 with tab1:
-    st.header("แบบสำรวจข้อมูล")
+    st.caption("กรอกข้อมูลให้ครบถ้วนก่อนกดพิมพ์รายงาน")
     with st.expander("1. ข้อมูลทั่วไป", expanded=True):
         c1, c2, c3 = st.columns(3)
         st.session_state.hn = c1.text_input("HN", key="i_hn")
@@ -243,19 +220,10 @@ with tab1:
         st.session_state.stump_len = c1.selectbox("ความยาวตอขา", ["สั้น", "ปานกลาง", "ยาว"], key="i_slen")
         st.session_state.stump_shape = c1.selectbox("รูปทรงตอขา", ["Conical", "Cylindrical", "Bulbous", "Other"], key="i_shp")
         if st.session_state.stump_shape=="Other": st.session_state.shape_ot = c1.text_input("ระบุทรง", key="i_shp_ot")
-        st.session_state.surgery = c2.radio("ผ่าตัดเพิ่มเติม", ["ไม่ใช่", "ใช่"], key="i_surg")
-        if st.session_state.surgery=="ใช่":
-            st.session_state.surg_details = c2.multiselect("ระบุ", ["ตัดกระดูก", "ตัดผิวหนัง", "Other"], key="i_surg_d")
-            if "Other" in st.session_state.surg_details: st.session_state.surg_ot = c2.text_input("ระบุผ่าตัด", key="i_surg_ot")
 
     with st.expander("3-4. การฟื้นฟู & กายอุปกรณ์"):
         st.session_state.personnel = st.multiselect("บุคลากร", ["นักกายอุปกรณ์", "นักกายภาพ", "แพทย์", "Other"], key="i_per")
         if "Other" in st.session_state.personnel: st.session_state.pers_ot = st.text_input("ระบุบุคลากร", key="i_per_ot")
-        st.session_state.rehab_status = st.radio("ประวัติฟื้นฟู", ["ไม่เคย", "เคย"], horizontal=True, key="i_reh")
-        if st.session_state.rehab_status=="เคย":
-            st.session_state.activities = st.multiselect("กิจกรรม", ["ถุงลดบวม", "พันผ้ายืด", "ฝึกเดิน", "Other"], key="i_act")
-            if "Other" in st.session_state.activities: st.session_state.act_ot = st.text_input("ระบุกิจกรรม", key="i_act_ot")
-        st.markdown("---")
         st.session_state.service = st.multiselect("บริการ", ["ทำใหม่", "เปลี่ยนเบ้า", "ซ่อม", "Other"], key="i_srv")
         if "Other" in st.session_state.service: st.session_state.serv_ot = st.text_input("ระบุบริการ", key="i_srv_ot")
         c1, c2 = st.columns(2)
