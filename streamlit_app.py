@@ -1,13 +1,6 @@
 import streamlit as st
 import time
 from datetime import datetime
-import io
-
-# 📦 ต้องติดตั้ง: pip install python-docx
-from docx import Document 
-from docx.shared import Pt, RGBColor
-from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.oxml.ns import qn
 
 # =========================================================
 # ⚙️ CONFIG & CSS
@@ -16,20 +9,21 @@ st.set_page_config(page_title="Prosthesis Registry & TUG", page_icon="🦿", lay
 
 st.markdown("""
     <style>
-    /* ปรับตัวเลขนาฬิกาให้ใหญ่และอ่านง่าย */
+    /* Metric Style */
     div[data-testid="stMetricValue"] {
         font-size: 80px !important;
         font-family: 'Courier New', monospace;
         color: #1F618D;
         font-weight: bold;
     }
-    /* กรอบ TUG */
+    /* TUG Box */
     .tug-box {
         border: 2px solid #ddd;
         padding: 20px;
         border-radius: 10px;
         background-color: #f9f9f9;
         text-align: center;
+        margin-top: 20px;
     }
     .stButton button {
         height: 3em;
@@ -39,7 +33,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # =========================================================
-# 📦 SESSION STATE (เตรียมตัวแปรให้ครบ 33 ข้อ)
+# 📦 SESSION STATE SETUP
 # =========================================================
 defaults = {
     # TUG System
@@ -72,16 +66,14 @@ defaults = {
     'liner': [], 'liner_ot': '',
     'suspension': [], 'susp_ot': '',
     'foot': [], 'foot_ot': '',
-    'knee': [], 'knee_ot': '', # Item 27 (เฉพาะเหนือเข่า)
+    'knee': [], 'knee_ot': '',
     
-    # 5. Social & Function (Items 28-33)
+    # 5. Social & Function
     'assist': 'ไม่ใช้', 'asst_ot': '',
     'stand_hours': '1-3 ชม.', 'walk_hours': '1-3 ชม.',
     'fall_hist': 'ไม่มี', 'fall_freq': '1-2 ครั้ง', 'fall_inj': False,
-    # Q31-32
     'q31_1': 'ไม่มีปัญหา (0-4%)', 'q31_2': 'ไม่มีปัญหา (0-4%)', 
     'q32_1': 'ไม่มีปัญหา (0-4%)', 'q32_2': 'ไม่มีปัญหา (0-4%)',
-    # Q33 Support
     'supp_family': 'ใช่', 
     'supp_org': 'ไม่ใช่', 'supp_sources': [], 'supp_ot': '',
     
@@ -93,7 +85,7 @@ for key, val in defaults.items():
     if key not in st.session_state:
         st.session_state[key] = val
 
-# ฟังก์ชันช่วยจัดการ Text ที่มี "Other"
+# Helper to get text safely
 def get_val(key, other_key=None):
     val = st.session_state[key]
     if isinstance(val, list):
@@ -107,134 +99,122 @@ def get_val(key, other_key=None):
         return str(val)
 
 # =========================================================
-# 📄 WORD GENERATOR (Fixed Complete Data)
+# 📄 HTML REPORT GENERATOR (FOR PDF)
 # =========================================================
-def generate_word_report():
-    doc = Document()
-    
-    # Config Font (ใช้ Angsana New เพื่อภาษาไทยที่ถูกต้อง)
-    style = doc.styles['Normal']
-    style.font.name = 'Angsana New'
-    style.font.size = Pt(14)
-    style.element.rPr.rFonts.set(qn('w:eastAsia'), 'Angsana New')
-
-    # Title
-    head = doc.add_heading('แบบสำรวจประวัติผู้ใช้ขาเทียม (Registry Report)', 0)
-    head.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    doc.add_paragraph(f"พิมพ์เมื่อ: {datetime.now().strftime('%d/%m/%Y %H:%M')}\n").alignment = WD_ALIGN_PARAGRAPH.CENTER
-
-    # --- 1. ข้อมูลทั่วไป ---
-    doc.add_heading('1. ข้อมูลทั่วไป (General)', level=1)
-    t1 = doc.add_table(rows=3, cols=2)
-    t1.style = 'Table Grid'
-    r = t1.rows
-    r[0].cells[0].text = f"ชื่อ-สกุล: {st.session_state.fname}"
-    r[0].cells[1].text = f"HN: {st.session_state.hn}"
-    r[1].cells[0].text = f"เพศ: {st.session_state.gender} | เกิด: {st.session_state.birth_year} (อายุ {datetime.now().year + 543 - st.session_state.birth_year} ปี)"
-    r[1].cells[1].text = f"รูปร่าง: {st.session_state.weight} กก. / {st.session_state.height} ซม."
-    r[2].cells[0].text = f"ที่อยู่: {st.session_state.province}, {get_val('country', 'cnt_ot')}"
-    r[2].cells[1].text = f"สัญชาติ: {get_val('nationality', 'nat_ot')}"
-
-    # --- 2. การแพทย์ ---
-    doc.add_heading('2. ข้อมูลทางการแพทย์ (Medical)', level=1)
-    t2 = doc.add_table(rows=5, cols=2)
-    t2.style = 'Table Grid'
-    r = t2.rows
-    r[0].cells[0].text = f"โรคประจำตัว: {get_val('comorbidities', 'comorb_ot')}"
-    r[0].cells[1].text = f"สาเหตุการตัด: {get_val('cause', 'cause_ot')}"
-    r[1].cells[0].text = f"ระดับการตัด: {get_val('amp_level', 'level_ot')} ({st.session_state.side})"
-    r[1].cells[1].text = f"ปีที่ตัด: {st.session_state.amp_year} (K-Level: {st.session_state.k_level})"
-    r[2].cells[0].text = f"ตอขา: {st.session_state.stump_len}, {get_val('stump_shape', 'shape_ot')}"
-    r[2].cells[1].text = f"ผ่าตัดเพิ่มเติม: {st.session_state.surgery} {get_val('surg_details', 'surg_ot')}"
-    
-    # --- 3. ฟื้นฟู ---
-    doc.add_heading('3. การฟื้นฟู (Rehab)', level=1)
-    r[3].cells[0].text = f"บุคลากร: {get_val('personnel', 'pers_ot')}"
-    r[3].cells[1].text = f"สถานะฟื้นฟู: {st.session_state.rehab_status} ({get_val('activities', 'act_ot')})"
-
-    # --- 4. กายอุปกรณ์ ---
-    doc.add_heading('4. ข้อมูลกายอุปกรณ์ (Prosthesis)', level=1)
-    p = doc.add_paragraph()
-    p.add_run(f"บริการครั้งนี้: {get_val('service', 'serv_ot')}\n").bold = True
-    p.add_run(f"วันที่หล่อ: {st.session_state.date_cast} | วันที่รับ: {st.session_state.date_deliv}\n")
-    p.add_run(f"Socket: {get_val('socket', 'sock_ot')} | Liner: {get_val('liner', 'liner_ot')}\n")
-    p.add_run(f"Suspension: {get_val('suspension', 'susp_ot')} | Foot: {get_val('foot', 'foot_ot')}\n")
-    
-    # Logic: โชว์เข่าเฉพาะเมื่อตัดขาเหนือเข่า
-    if st.session_state.amp_level in ["Transfemoral", "Knee Disarticulation", "Other"]:
-        knee_txt = get_val('knee', 'knee_ot')
-        p.add_run(f"Knee (ข้อเข่า): {knee_txt}").bold = True
-    else:
-        p.add_run("Knee: - (ระดับต่ำกว่าเข่า หรือไม่ได้ระบุ)")
-
-    # --- 5. สังคม & การใช้งาน ---
-    doc.add_heading('5. สังคมและการใช้งาน (Social & Function)', level=1)
-    t3 = doc.add_table(rows=2, cols=2)
-    t3.style = 'Table Grid'
-    r = t3.rows
-    r[0].cells[0].text = f"อุปกรณ์ช่วยเดิน: {get_val('assist', 'asst_ot')}"
-    r[0].cells[1].text = f"การใช้งาน (ยืน/เดิน): {st.session_state.stand_hours} / {st.session_state.walk_hours}"
-    
+def create_html_report():
+    # Logic: Fall History Text
     fall_txt = "ไม่มี"
     if st.session_state.fall_hist == "มี":
         inj = "บาดเจ็บ" if st.session_state.fall_inj else "ไม่เจ็บ"
         fall_txt = f"มี ({st.session_state.fall_freq}) - {inj}"
-    r[1].cells[0].text = f"ประวัติล้ม (6ด.): {fall_txt}"
-    r[1].cells[1].text = f"ดูแลจากครอบครัว: {st.session_state.supp_family}"
 
-    # ส่วนที่เคยหายไป (Q31-33)
-    doc.add_paragraph("\nการประเมินตนเอง (Items 31-32):").bold = True
-    doc.add_paragraph(f"• สังคม (ตนเอง): {st.session_state.q31_1}")
-    doc.add_paragraph(f"• สังคม (เทียบคนอื่น): {st.session_state.q31_2}")
-    doc.add_paragraph(f"• งาน (ตนเอง): {st.session_state.q32_1}")
-    doc.add_paragraph(f"• งาน (เทียบคนอื่น): {st.session_state.q32_2}")
-    
-    supp_txt = "ไม่มี"
-    if st.session_state.supp_org == "ใช่":
-        supp_txt = get_val('supp_sources', 'supp_ot')
-    doc.add_paragraph(f"การสนับสนุนจากหน่วยงาน (Item 33): {supp_txt}")
+    # Logic: Knee
+    knee_row = ""
+    if st.session_state.amp_level in ["Transfemoral", "Knee Disarticulation", "Other"]:
+        knee_row = f"<tr><td><b>Knee (ข้อเข่า):</b></td><td>{get_val('knee', 'knee_ot')}</td></tr>"
 
-    # --- 6. TUG Results ---
-    doc.add_heading('6. ผลทดสอบ TUG Test', level=1)
-    res_msg = "NORMAL" if st.session_state.tug_avg < 13.5 else "HIGH RISK"
-    
-    p_tug = doc.add_paragraph()
-    p_tug.add_run(f"Trial 1: {st.session_state.t1} s\n")
-    p_tug.add_run(f"Trial 2: {st.session_state.t2} s\n")
-    p_tug.add_run(f"Trial 3: {st.session_state.t3} s\n")
-    run = p_tug.add_run(f"\nAverage: {st.session_state.tug_avg:.2f} seconds ({res_msg})")
-    run.bold = True
-    run.font.size = Pt(16)
-    run.font.color.rgb = RGBColor(0, 128, 0) if st.session_state.tug_avg < 13.5 else RGBColor(200, 0, 0)
+    # Logic: TUG Result
+    tug_res = "NORMAL" if st.session_state.tug_avg < 13.5 else "HIGH RISK"
+    tug_color = "green" if st.session_state.tug_avg < 13.5 else "red"
 
-    bio = io.BytesIO()
-    doc.save(bio)
-    return bio
+    html = f"""
+    <html>
+    <head>
+        <title>Report_{st.session_state.hn}</title>
+        <style>
+            body {{ font-family: 'Sarabun', sans-serif; padding: 40px; }}
+            h1 {{ text-align: center; color: #2C3E50; }}
+            h2 {{ color: #1F618D; border-bottom: 2px solid #ddd; padding-bottom: 5px; margin-top: 30px; }}
+            table {{ width: 100%; border-collapse: collapse; margin-bottom: 10px; }}
+            td {{ padding: 8px; vertical-align: top; border-bottom: 1px solid #eee; }}
+            td:first-child {{ font-weight: bold; width: 35%; color: #555; }}
+            .tug-result {{ 
+                text-align: center; border: 3px solid {tug_color}; padding: 15px; 
+                margin-top: 20px; border-radius: 10px; color: {tug_color};
+            }}
+            @media print {{
+                .no-print {{ display: none; }}
+            }}
+        </style>
+        <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
+    </head>
+    <body onload="window.print()">
+        <div style="text-align:right; font-size: 0.8em; color: gray;">
+            Printed: {datetime.now().strftime('%d/%m/%Y %H:%M')}
+        </div>
+
+        <h1>📄 รายงานประวัติผู้ใช้ขาเทียม</h1>
+        
+        <h2>1. ข้อมูลทั่วไป (General)</h2>
+        <table>
+            <tr><td>HN:</td><td>{st.session_state.hn}</td></tr>
+            <tr><td>ชื่อ-สกุล:</td><td>{st.session_state.fname}</td></tr>
+            <tr><td>เพศ / อายุ:</td><td>{st.session_state.gender} / {datetime.now().year + 543 - st.session_state.birth_year} ปี</td></tr>
+            <tr><td>ที่อยู่:</td><td>{st.session_state.province}, {get_val('country', 'cnt_ot')}</td></tr>
+            <tr><td>สัญชาติ:</td><td>{get_val('nationality', 'nat_ot')}</td></tr>
+        </table>
+
+        <h2>2. ข้อมูลทางการแพทย์ (Medical)</h2>
+        <table>
+            <tr><td>โรคประจำตัว:</td><td>{get_val('comorbidities', 'comorb_ot')}</td></tr>
+            <tr><td>สาเหตุ/ระดับการตัด:</td><td>{get_val('cause', 'cause_ot')} / {get_val('amp_level', 'level_ot')} ({st.session_state.side})</td></tr>
+            <tr><td>ลักษณะตอขา:</td><td>{st.session_state.stump_len}, {get_val('stump_shape', 'shape_ot')}</td></tr>
+            <tr><td>K-Level:</td><td>{st.session_state.k_level}</td></tr>
+        </table>
+
+        <h2>3. กายอุปกรณ์ (Prosthesis)</h2>
+        <table>
+            <tr><td>บริการ:</td><td>{get_val('service', 'serv_ot')}</td></tr>
+            <tr><td>วันรับบริการ:</td><td>หล่อแบบ: {st.session_state.date_cast} | รับขา: {st.session_state.date_deliv}</td></tr>
+            <tr><td>Socket / Liner:</td><td>{get_val('socket', 'sock_ot')} / {get_val('liner', 'liner_ot')}</td></tr>
+            <tr><td>Suspension:</td><td>{get_val('suspension', 'susp_ot')}</td></tr>
+            <tr><td>Foot:</td><td>{get_val('foot', 'foot_ot')}</td></tr>
+            {knee_row}
+        </table>
+
+        <h2>4. ผลการเดิน (TUG Test)</h2>
+        <table>
+            <tr><td>Trial 1-3:</td><td>{st.session_state.t1}, {st.session_state.t2}, {st.session_state.t3} วินาที</td></tr>
+        </table>
+        
+        <div class="tug-result">
+            <h2>Average: {st.session_state.tug_avg:.2f} sec</h2>
+            <h1>{tug_res}</h1>
+        </div>
+
+        <div style="margin-top: 50px; text-align: center; color: gray; font-size: 0.8em;">
+            --- End of Report ---
+        </div>
+    </body>
+    </html>
+    """
+    return html
 
 # =========================================================
-# 📱 APP UI & LOGIC
+# 📱 APP LAYOUT
 # =========================================================
 
 st.sidebar.title("🦿 เมนูหลัก")
-st.sidebar.info("แนะนำ: กรอกข้อมูลให้ครบก่อนกดดาวน์โหลด")
+st.sidebar.info("💡 วิธีบันทึก PDF: \n1. กดปุ่มดาวน์โหลดด้านล่าง \n2. เปิดไฟล์ที่ได้ \n3. หน้าต่างพิมพ์จะเด้งขึ้นมา \n4. เลือก 'Save as PDF'")
 
-if st.sidebar.button("📄 สร้างไฟล์ Word (.docx)"):
+# ปุ่มดาวน์โหลดแบบใหม่ (HTML)
+if st.sidebar.button("🖨️ สร้างรายงาน (PDF)"):
     if not st.session_state.hn:
         st.sidebar.error("⚠️ กรุณากรอก HN ก่อน")
     else:
-        file_buffer = generate_word_report()
+        html_data = create_html_report()
         st.sidebar.download_button(
-            label="⬇️ ดาวน์โหลดไฟล์ Word",
-            data=file_buffer,
-            file_name=f"Report_{st.session_state.hn}.docx",
-            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            label="⬇️ คลิกเพื่อดาวน์โหลดรายงาน",
+            data=html_data,
+            file_name=f"Report_{st.session_state.hn}.html",
+            mime="text/html"
         )
 
+# TABS
 tab1, tab2 = st.tabs(["📝 กรอกข้อมูล (Registry)", "⏱️ จับเวลา (TUG Test)"])
 
 with tab1:
-    st.header("แบบสำรวจข้อมูล (Items 1-33)")
-    
+    st.header("แบบสำรวจข้อมูล")
     with st.expander("1. ข้อมูลทั่วไป", expanded=True):
         c1, c2, c3 = st.columns(3)
         st.session_state.hn = c1.text_input("HN", key="i_hn")
@@ -290,82 +270,57 @@ with tab1:
         st.session_state.foot = c2.multiselect("Foot", ["SACH", "Single axis", "Dynamic", "Other"], key="i_ft")
         if "Other" in st.session_state.foot: st.session_state.foot_ot = c2.text_input("ระบุ Foot", key="i_ft_ot")
 
-        # Knee Section: โชว์เฉพาะถ้าตัดเหนือเข่า
         if st.session_state.amp_level in ["Transfemoral", "Knee Disarticulation", "Other"]:
-            st.info("🦵 ส่วนนี้สำหรับระดับเหนือเข่า (Transfemoral) ขึ้นไป")
+            st.info("🦵 ส่วนนี้สำหรับระดับเหนือเข่า")
             st.session_state.knee = st.multiselect("เลือก Knee", ["Single axis", "Polycentric", "Hydraulic", "Other"], key="i_kn")
             if "Other" in st.session_state.knee: st.session_state.knee_ot = st.text_input("ระบุ Knee", key="i_kn_ot")
 
-    with st.expander("5. สังคม & การใช้งาน", expanded=True):
+    with st.expander("5. สังคม & การใช้งาน"):
         c1, c2 = st.columns(2)
         st.session_state.assist = c1.selectbox("อุปกรณ์ช่วยเดิน", ["ไม่ใช้", "ไม้เท้า", "Walker", "Other"], key="i_ast")
         if st.session_state.assist=="Other": st.session_state.asst_ot = c1.text_input("ระบุอุปกรณ์", key="i_ast_ot")
         st.session_state.stand_hours = c1.selectbox("ยืน/วัน", ["< 1 ชม.", "1-3 ชม.", "> 3 ชม."], key="i_std")
         st.session_state.walk_hours = c2.selectbox("เดิน/วัน", ["< 1 ชม.", "1-3 ชม.", "> 3 ชม."], key="i_wlk")
-        
-        st.markdown("---")
         st.session_state.fall_hist = st.radio("ประวัติล้ม (6ด.)", ["ไม่มี", "มี"], horizontal=True, key="i_fall")
         if st.session_state.fall_hist=="มี":
             c1, c2 = st.columns(2)
             st.session_state.fall_freq = c1.selectbox("ความถี่การล้ม", ["1-2 ครั้ง", "> 2 ครั้ง"], key="i_ffrq")
             st.session_state.fall_inj = c2.checkbox("มีการบาดเจ็บ", key="i_finj")
-        
         st.markdown("---")
-        st.write("##### 31-32. การมีส่วนร่วมในสังคม & การทำงาน")
-        p_lvl = ["ไม่มีปัญหา (0-4%)", "มีปัญหาเล็กน้อย (5-24%)", "มีปัญหาปานกลาง (25-49%)", "มีปัญหามาก (50-95%)", "มีปัญหามากที่สุด (96-100%)"]
-        c1, c2 = st.columns(2)
-        st.session_state.q31_1 = c1.selectbox("31.1 สังคม (ตนเอง)", p_lvl, key="i_q311")
-        st.session_state.q31_2 = c2.selectbox("31.2 สังคม (เทียบคนอื่น)", p_lvl, key="i_q312")
-        st.session_state.q32_1 = c1.selectbox("32.1 งาน (ตนเอง)", p_lvl, key="i_q321")
-        st.session_state.q32_2 = c2.selectbox("32.2 งาน (เทียบคนอื่น)", p_lvl, key="i_q322")
-        
-        st.markdown("---")
-        st.write("##### 33. การสนับสนุน")
-        st.session_state.supp_family = st.radio("33.1 การดูแลจากครอบครัว", ["ใช่", "ไม่ใช่"], horizontal=True, key="i_sfam")
-        st.session_state.supp_org = st.radio("33.2 สนับสนุนจากหน่วยงาน", ["ใช่", "ไม่ใช่"], horizontal=True, key="i_sorg")
-        if st.session_state.supp_org=="ใช่":
-            st.session_state.supp_sources = st.multiselect("ระบุหน่วยงาน", ["รัฐ", "เอกชน", "Other"], key="i_ssrc")
-            if "Other" in st.session_state.supp_sources: st.session_state.supp_ot = st.text_input("ระบุหน่วยงานอื่น", key="i_ssrc_ot")
+        st.write("การประเมินตนเอง & สนับสนุน")
+        st.session_state.q31_1 = c1.selectbox("31.1 สังคม (ตนเอง)", ["ไม่มีปัญหา", "มีปัญหา"], key="i_q311")
+        st.session_state.q31_2 = c2.selectbox("31.2 สังคม (เทียบคนอื่น)", ["ไม่มีปัญหา", "มีปัญหา"], key="i_q312")
+        st.session_state.supp_family = st.radio("ครอบครัวดูแล", ["ใช่", "ไม่ใช่"], horizontal=True, key="i_sfam")
 
 with tab2:
     st.header("⏱️ Timed Up and Go (TUG)")
     
-    # --- LOGIC นาฬิกาใหม่ (ไม่ค้าง) ---
     col_clock, col_btns = st.columns([2, 1])
-    
     with col_clock:
         clock_container = st.empty()
-        # แสดงเวลา
         if st.session_state.is_running:
-            # คำนวณเวลาสดจาก start_time
-            now = time.time()
-            elapsed = now - st.session_state.start_time
-            clock_container.metric(label="Time (Seconds)", value=f"{elapsed:.2f} s")
-            # Rerun เพื่อให้เวลาเดิน (แต่ปุ่ม Stop จะทำงานได้เพราะอยู่นอก Container นี้)
+            elapsed = time.time() - st.session_state.start_time
+            clock_container.metric(label="Time", value=f"{elapsed:.2f} s")
             time.sleep(0.1) 
             st.rerun()
         else:
-            clock_container.metric(label="Time (Seconds)", value=f"{st.session_state.elapsed_time:.2f} s")
+            clock_container.metric(label="Time", value=f"{st.session_state.elapsed_time:.2f} s")
 
     with col_btns:
-        # ปุ่มควบคุมแยกออกมาเพื่อให้กดติดง่าย
         if st.button("▶️ START", type="primary", use_container_width=True, disabled=st.session_state.is_running):
             st.session_state.is_running = True
             st.session_state.start_time = time.time()
             st.rerun()
-
         if st.button("⏹️ STOP", type="secondary", use_container_width=True, disabled=not st.session_state.is_running):
             st.session_state.is_running = False
             st.session_state.elapsed_time = time.time() - st.session_state.start_time
             st.rerun()
-
         if st.button("🔄 RESET", use_container_width=True):
             st.session_state.is_running = False
             st.session_state.elapsed_time = 0.0
             st.rerun()
 
     st.markdown("---")
-    st.write("บันทึกผลการทดสอบ:")
     c1, c2, c3 = st.columns(3)
     st.session_state.t1 = c1.number_input("Trial 1", 0.0, key="v_t1")
     st.session_state.t2 = c2.number_input("Trial 2", 0.0, key="v_t2")
@@ -376,9 +331,4 @@ with tab2:
         st.session_state.tug_avg = sum(valid_times) / len(valid_times)
         status = "High Fall Risk (เสี่ยงล้มสูง)" if st.session_state.tug_avg >= 13.5 else "Normal Mobility (ปกติ)"
         color = "#C0392B" if st.session_state.tug_avg >= 13.5 else "#28B463"
-        st.markdown(f"""
-        <div class="tug-box" style="border-color: {color}; color: {color};">
-            <h3>Average: {st.session_state.tug_avg:.2f} sec</h3>
-            <h1>{status}</h1>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown(f"""<div class="tug-box" style="border-color: {color}; color: {color};"><h3>Avg: {st.session_state.tug_avg:.2f} s</h3><h1>{status}</h1></div>""", unsafe_allow_html=True)
