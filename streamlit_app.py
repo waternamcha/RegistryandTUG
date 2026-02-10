@@ -10,81 +10,53 @@ st.set_page_config(page_title="Prosthesis Registry", layout="wide", page_icon="�
 
 st.markdown("""
     <style>
-    /* Import Google Font: Sarabun */
+    /* Import Google Font */
     @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap');
     
-    /* Global Font Setting */
     html, body, [class*="css"] {
         font-family: 'Sarabun', sans-serif;
     }
 
-    /* 1. Main Title Styling (จัดกึ่งกลาง) */
+    /* Main Title */
     .main-title {
         text-align: center;
-        font-size: 2.8em;
+        font-size: 2.5em;
         font-weight: 700;
-        color: #154360; /* สีน้ำเงินเข้ม */
+        color: #154360;
         margin-top: -20px;
-        margin-bottom: 5px;
-        text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
     }
-    
     .sub-title {
-        text-align: center;
-        font-size: 1.2em;
-        color: #5D6D7E;
-        margin-bottom: 30px;
+        text-align: center; font-size: 1.1em; color: #5D6D7E; margin-bottom: 20px;
     }
 
-    /* 2. TUG Timer Display */
+    /* TUG Timer */
     .tug-display { 
-        font-size: 90px; 
-        font-weight: 700; 
-        color: #2E86C1; 
-        text-align: center; 
-        background-color: #f4f6f7; 
-        padding: 30px; 
-        border-radius: 20px; 
-        margin-bottom: 20px;
+        font-size: 90px; font-weight: 700; color: #2E86C1; 
+        text-align: center; background-color: #f4f6f7; 
+        padding: 30px; border-radius: 20px; margin-bottom: 20px;
         font-family: 'Courier New', monospace;
         border: 3px solid #d6eaf8;
-        box-shadow: inset 0 0 10px rgba(0,0,0,0.05);
     }
     
-    /* 3. Result Box */
+    /* Result Box */
     .result-box {
-        padding: 25px; 
-        border-radius: 15px; 
-        text-align: center; 
-        color: white; 
-        font-weight: bold; 
-        font-size: 1.3em;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-        margin-top: 15px;
+        padding: 20px; border-radius: 15px; text-align: center; 
+        color: white; font-weight: bold; font-size: 1.3em;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15); margin-top: 15px;
     }
 
-    /* 4. Expander Styling (ปรับหัวข้อให้สวย) */
+    /* Expander Header */
     .streamlit-expanderHeader {
-        font-size: 1.1em;
-        font-weight: 600;
-        color: #1F618D;
-        background-color: #ffffff;
-        border: 1px solid #eee;
-        border-radius: 8px;
+        font-size: 1.1em; font-weight: 600; color: #1F618D;
+        background-color: #ffffff; border: 1px solid #eee; border-radius: 8px;
     }
     
-    /* 5. Input Fields Styling */
-    .stTextInput>div>div>input {
-        border-radius: 8px;
-    }
-    .stSelectbox>div>div>div {
-        border-radius: 8px;
-    }
+    /* Input Styling */
+    .stTextInput>div>div>input { border-radius: 8px; }
+    .stSelectbox>div>div>div { border-radius: 8px; }
 
-    /* Hide Streamlit Default Elements */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
-    header {visibility: hidden;} /* ซ่อนแถบสีรุ้งด้านบน */
     </style>
 """, unsafe_allow_html=True)
 
@@ -92,31 +64,22 @@ st.markdown("""
 # 2. SESSION STATE MANAGEMENT
 # ---------------------------------------------------------
 if 'init' not in st.session_state:
-    # Default values matching PDF structure
     defaults = {
-        # 1. General Info
-        'hn': '', 'fname': '', 
-        'dob': date(1980, 1, 1), 'age': 0,
-        'gender': 'ชาย', 
+        # 1. General
+        'hn': '', 'fname': '', 'dob': date(1980, 1, 1), 'age': 0, 'gender': 'ชาย', 
         'country': 'Thailand', 'country_ot': '',
         'province': 'กรุงเทพมหานคร', 'province_ot': '',
         'nationality': 'ไทย', 'nationality_ot': '',
         'weight': 0.0, 'height': 0.0,
-        
         # 2. Medical
         'comorbidities': [], 'comorb_ot': '',
         'cause': 'อุบัติเหตุ', 'cause_ot': '',
-        'amp_year': 2560, 'side': 'ขวา',
-        'level': 'Transtibial', 'level_ot': '',
-        'stump_len': 'ปานกลาง', 
-        'stump_shape': 'Cylindrical', 'shape_ot': '',
-        'surgery': 'ไม่ใช่', 'surg_details': [],
-        'k_level': 'K1',
-        
+        'amp_year': 2560, 'side': 'ขวา', 'level': 'Transtibial', 'level_ot': '',
+        'stump_len': 'ปานกลาง', 'stump_shape': 'Cylindrical', 'shape_ot': '',
+        'surgery': 'ไม่ใช่', 'surg_details': [], 'k_level': 'K1',
         # 3. Rehab
         'personnel': [], 'personnel_ot': '',
         'rehab': 'ไม่เคย', 'rehab_act': [], 'rehab_act_ot': '',
-        
         # 4. Prosthesis
         'service': [], 'service_ot': '',
         'date_cast': date.today(), 'date_deliv': date.today(),
@@ -125,16 +88,13 @@ if 'init' not in st.session_state:
         'suspension': [], 'susp_ot': '',
         'foot': [], 'foot_ot': '',
         'knee': [], 'knee_ot': '', 
-        
         # 5. Social
         'assist': 'ไม่ใช้', 'assist_ot': '',
         'stand_hr': '1-3 ชั่วโมง', 'walk_hr': '1-3 ชั่วโมง',
         'fall': 'ไม่', 'fall_freq': '', 'fall_inj': 'ไม่',
         'q31_1': 'ไม่มีปัญหา (0-4%)', 'q31_2': 'ไม่มีปัญหา (0-4%)',
         'q32_1': 'ไม่มีปัญหา (0-4%)', 'q32_2': 'ไม่มีปัญหา (0-4%)',
-        'supp_fam': 'ใช่', 'supp_org': 'ไม่ใช่', 
-        'supp_src': [], 'supp_src_ot': '',
-        
+        'supp_fam': 'ใช่', 'supp_org': 'ไม่ใช่', 'supp_src': [], 'supp_src_ot': '',
         # TUG
         'tug_running': False, 'start_time': None,
         't1': 0.0, 't2': 0.0, 't3': 0.0, 'tug_avg': 0.0, 'tug_status': '-'
@@ -143,7 +103,7 @@ if 'init' not in st.session_state:
         st.session_state[k] = v
     st.session_state.init = True
 
-# Helper to get "Other" text
+# Helper
 def get_txt(val, ot_key):
     if val == "Other" or val == "อื่นๆ" or (isinstance(val, list) and ("Other" in val or "อื่นๆ" in val)):
         return f"{val} ({st.session_state[ot_key]})"
@@ -264,14 +224,27 @@ def create_html():
 # ---------------------------------------------------------
 # 4. APP LAYOUT
 # ---------------------------------------------------------
+# สร้าง HTML สำหรับดาวน์โหลด
+html_data = create_html()
 
-# ส่วนหัวข้อหลัก (Header)
-st.markdown('<div class="main-title">🏥 Digital Prosthesis Registry</div>', unsafe_allow_html=True)
-st.markdown('<div class="sub-title">ระบบบันทึกข้อมูลกายอุปกรณ์และทดสอบการเดิน (OM Platform)</div>', unsafe_allow_html=True)
+# Header
+col_h1, col_h2 = st.columns([3, 1])
+with col_h1:
+    st.markdown('<div class="main-title">🏥 Digital Prosthesis Registry</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sub-title">ระบบบันทึกข้อมูลกายอุปกรณ์และทดสอบการเดิน (OM Platform)</div>', unsafe_allow_html=True)
+with col_h2:
+    # ปุ่มดาวน์โหลดที่มุมขวาบน (เพิ่มมาใหม่เพื่อให้เห็นชัด)
+    st.download_button(
+        "📥 Download Report",
+        data=io.BytesIO(html_data.encode('utf-8')),
+        file_name=f"Report_{st.session_state.hn}.html",
+        mime="text/html",
+        type="primary",
+        use_container_width=True
+    )
 
 # Sidebar
 st.sidebar.markdown("### 📥 Report Management")
-html_data = create_html()
 st.sidebar.download_button(
     "💾 Download HTML Report",
     data=io.BytesIO(html_data.encode('utf-8')),
@@ -285,109 +258,84 @@ tab1, tab2 = st.tabs(["📝 Registry Form", "⏱️ TUG Test"])
 # === TAB 1: REGISTRY (Expandable Sections) ===
 with tab1:
     
-    # --- Section 1: General ---
     with st.expander("1. ข้อมูลทั่วไป (General Info)", expanded=True):
         st.date_input("1. วัน/เดือน/ปีเกิด (Date of Birth)", key="dob")
-        
-        # Auto calc age display
         age_now = date.today().year - st.session_state.dob.year
         st.caption(f"อายุปัจจุบัน: {age_now} ปี")
         
         st.selectbox("2. เพศ (Gender)", ["ชาย", "หญิง"], key="gender")
         
         st.selectbox("3. ประเทศที่อยู่อาศัย", ["Thailand", "Other"], key="country")
-        if st.session_state.country == "Other": 
-            st.text_input("ระบุประเทศ", key="country_ot")
+        if st.session_state.country == "Other": st.text_input("ระบุประเทศ", key="country_ot")
         
         st.selectbox("4. จังหวัดที่อยู่อาศัย", ["กรุงเทพมหานคร", "เชียงใหม่", "ขอนแก่น", "ภูเก็ต", "Other"], key="province")
-        if st.session_state.province == "Other": 
-            st.text_input("ระบุจังหวัด", key="province_ot")
+        if st.session_state.province == "Other": st.text_input("ระบุจังหวัด", key="province_ot")
         
         st.selectbox("5. สัญชาติ", ["ไทย", "Other"], key="nationality")
-        if st.session_state.nationality == "Other": 
-            st.text_input("ระบุสัญชาติ", key="nationality_ot")
+        if st.session_state.nationality == "Other": st.text_input("ระบุสัญชาติ", key="nationality_ot")
         
         st.text_input("6. เลขประจำตัวผู้ป่วย (HN)", key="hn")
         st.text_input("ชื่อ-นามสกุล (Name)", key="fname")
-        
         st.number_input("7. น้ำหนัก (kg)", 0.0, step=0.1, key="weight")
         st.number_input("8. ส่วนสูง (cm)", 0.0, step=1.0, key="height")
 
-    # --- Section 2: Medical ---
     with st.expander("2. ข้อมูลการตัดขาและสุขภาพ", expanded=False):
         st.multiselect("9. โรคประจำตัว", ["เบาหวาน", "ความดัน", "หัวใจ", "มะเร็ง", "ติดเชื้อ", "ไม่มี", "Other"], key="comorbidities")
-        if "Other" in st.session_state.comorbidities: 
-            st.text_input("ระบุโรค", key="comorb_ot")
+        if "Other" in st.session_state.comorbidities: st.text_input("ระบุโรค", key="comorb_ot")
         
         st.selectbox("10. สาเหตุการตัดขา", ["อุบัติเหตุ", "เบาหวาน", "หลอดเลือด", "มะเร็ง", "ติดเชื้อ", "พิการแต่กำเนิด", "Other"], key="cause")
-        if st.session_state.cause == "Other": 
-            st.text_input("ระบุสาเหตุ", key="cause_ot")
+        if st.session_state.cause == "Other": st.text_input("ระบุสาเหตุ", key="cause_ot")
         
         st.number_input("11. ปีที่ตัดขา (พ.ศ.)", 2490, 2600, key="amp_year")
         st.radio("12. ข้างที่ตัด", ["ซ้าย", "ขวา", "สองข้าง"], horizontal=True, key="side")
         
         st.selectbox("13. ระดับการตัดขา", ["Ankle disarticulation", "Transtibial", "Knee disarticulation", "Transfemoral", "Other"], key="level")
-        if st.session_state.level == "Other": 
-            st.text_input("ระบุระดับ", key="level_ot")
+        if st.session_state.level == "Other": st.text_input("ระบุระดับ", key="level_ot")
         
         st.selectbox("14. ความยาวตอขา", ["สั้น", "ปานกลาง", "ยาว"], key="stump_len")
         st.selectbox("15. รูปทรงตอขา", ["Conical", "Cylindrical", "Bulbous", "Other"], key="stump_shape")
-        if st.session_state.stump_shape == "Other": 
-            st.text_input("ระบุรูปทรง", key="shape_ot")
+        if st.session_state.stump_shape == "Other": st.text_input("ระบุรูปทรง", key="shape_ot")
         
         st.radio("16. ผ่าตัดเพิ่มเติม", ["ไม่ใช่", "ใช่"], horizontal=True, key="surgery")
-        if st.session_state.surgery == "ใช่":
-            st.multiselect("รายละเอียดการผ่าตัด", ["ตัดกระดูก", "ตัดผิวหนัง", "ตัดระดับสูงขึ้น"], key="surg_details")
+        if st.session_state.surgery == "ใช่": st.multiselect("รายละเอียดการผ่าตัด", ["ตัดกระดูก", "ตัดผิวหนัง", "ตัดระดับสูงขึ้น"], key="surg_details")
         
         st.selectbox("17. K-Level ก่อนตัด", ["K0", "K1", "K2", "K3", "K4"], key="k_level")
 
-    # --- Section 3: Rehab ---
     with st.expander("3. การฟื้นฟู (Rehab)", expanded=False):
         st.multiselect("18. บุคลากรที่ดูแล", ["นักกายอุปกรณ์", "นักกายภาพ", "แพทย์", "พยาบาล", "Other"], key="personnel")
-        if "Other" in st.session_state.personnel: 
-            st.text_input("ระบุบุคลากร", key="personnel_ot")
+        if "Other" in st.session_state.personnel: st.text_input("ระบุบุคลากร", key="personnel_ot")
         
         st.radio("19. เคยฟื้นฟูหรือไม่", ["ไม่เคย", "เคย"], horizontal=True, key="rehab")
         if st.session_state.rehab == "เคย":
             st.multiselect("กิจกรรม", ["ถุงลดบวม", "ผ้ายืด", "เบ้าซิลิโคน", "ฝึกเดิน", "Other"], key="rehab_act")
-            if "Other" in st.session_state.rehab_act: 
-                st.text_input("ระบุกิจกรรม", key="rehab_act_ot")
+            if "Other" in st.session_state.rehab_act: st.text_input("ระบุกิจกรรม", key="rehab_act_ot")
 
-    # --- Section 4: Prosthesis ---
     with st.expander("4. กายอุปกรณ์ (Prosthesis)", expanded=False):
         st.multiselect("20. การบริการครั้งนี้", ["ทำใหม่", "เปลี่ยนเบ้า", "ซ่อม", "Other"], key="service")
-        if "Other" in st.session_state.service: 
-            st.text_input("ระบุบริการ", key="service_ot")
+        if "Other" in st.session_state.service: st.text_input("ระบุบริการ", key="service_ot")
         
         c1, c2 = st.columns(2)
         with c1: st.date_input("21. วันที่หล่อแบบ", key="date_cast")
         with c2: st.date_input("22. วันที่ได้รับ", key="date_deliv")
         
         st.selectbox("23. Socket Type", ["PTB", "TSB", "KBM", "Quadrilateral", "Ischial Containment", "Other"], key="socket")
-        if st.session_state.socket == "Other": 
-            st.text_input("ระบุ Socket", key="socket_ot")
+        if st.session_state.socket == "Other": st.text_input("ระบุ Socket", key="socket_ot")
         
         st.selectbox("24. Liner", ["None", "Foam", "Silicone", "Gel", "Other"], key="liner")
-        if st.session_state.liner == "Other": 
-            st.text_input("ระบุ Liner", key="liner_ot")
+        if st.session_state.liner == "Other": st.text_input("ระบุ Liner", key="liner_ot")
         
         st.multiselect("25. Suspension", ["Cuff", "Pin Lock", "Suction", "Vacuum", "Belt", "Other"], key="suspension")
-        if "Other" in st.session_state.suspension: 
-            st.text_input("ระบุ Suspension", key="susp_ot")
+        if "Other" in st.session_state.suspension: st.text_input("ระบุ Suspension", key="susp_ot")
         
         st.multiselect("26. Foot", ["SACH", "Single Axis", "Dynamic", "Microprocessor", "Other"], key="foot")
-        if "Other" in st.session_state.foot: 
-            st.text_input("ระบุ Foot", key="foot_ot")
+        if "Other" in st.session_state.foot: st.text_input("ระบุ Foot", key="foot_ot")
         
         st.multiselect("27. Knee (สำหรับเหนือเข่า)", ["Single Axis", "Polycentric", "Hydraulic", "Microprocessor", "Other"], key="knee")
-        if "Other" in st.session_state.knee: 
-            st.text_input("ระบุ Knee", key="knee_ot")
+        if "Other" in st.session_state.knee: st.text_input("ระบุ Knee", key="knee_ot")
 
-    # --- Section 5: Social ---
     with st.expander("5. สังคมและการใช้งาน", expanded=False):
         st.selectbox("28. อุปกรณ์ช่วยเดิน", ["ไม่ใช้", "ไม้เท้า", "Walker", "Wheelchair", "Other"], key="assist")
-        if st.session_state.assist == "Other": 
-            st.text_input("ระบุอุปกรณ์", key="assist_ot")
+        if st.session_state.assist == "Other": st.text_input("ระบุอุปกรณ์", key="assist_ot")
         
         st.selectbox("29.1 เวลายืนต่อวัน", ["ไม่ยืน", "< 1 ชม.", "1-3 ชม.", "3-7 ชม.", "> 8 ชม."], key="stand_hr")
         st.selectbox("29.2 เวลาเดินต่อวัน", ["ไม่เดิน", "< 1 ชม.", "1-3 ชม.", "3-7 ชม.", "> 8 ชม."], key="walk_hr")
@@ -409,8 +357,7 @@ with tab1:
         st.radio("33.2 สนับสนุนจากองค์กร", ["ไม่ใช่", "ใช่"], horizontal=True, key="supp_org")
         if st.session_state.supp_org == "ใช่":
             st.multiselect("ระบุองค์กร", ["รัฐ", "ไม่แสวงหากำไร", "จ่ายเอง", "Other"], key="supp_src")
-            if "Other" in st.session_state.supp_src: 
-                st.text_input("ระบุองค์กรอื่น", key="supp_src_ot")
+            if "Other" in st.session_state.supp_src: st.text_input("ระบุองค์กรอื่น", key="supp_src_ot")
 
 # === TAB 2: TUG TEST ===
 with tab2:
