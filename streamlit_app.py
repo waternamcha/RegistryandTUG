@@ -20,18 +20,15 @@ st.markdown("""
         font-weight: bold;
         color: #154360;
     }
-    /* กล่องผลลัพธ์ */
-    .result-box {
-        padding: 15px;
-        background-color: #f0f2f6;
-        border-radius: 10px;
-        border-left: 5px solid #2E86C1;
-        margin-bottom: 10px;
+    /* ปรับ Radio Button ให้เรียงสวย */
+    div.row-widget.stRadio > div {
+        flex-direction: row;
+        align-items: stretch;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. ข้อมูลรายการ (Lists) ---
+# --- 2. ข้อมูลตัวเลือก (Lists) ---
 THAI_PROVINCES = [
     "กรุงเทพมหานคร", "กระบี่", "กาญจนบุรี", "กาฬสินธุ์", "กำแพงเพชร", "ขอนแก่น", "จันทบุรี", "ฉะเชิงเทรา", "ชลบุรี", "ชัยนาท",
     "ชัยภูมิ", "ชุมพร", "เชียงราย", "เชียงใหม่", "ตรัง", "ตราด", "ตาก", "นครนายก", "นครปฐม", "นครพนม", "นครราชสีมา",
@@ -46,213 +43,286 @@ THAI_PROVINCES = [
 COUNTRIES = ["Thailand", "United States", "United Kingdom", "Japan", "China", "Germany", "France", "Australia", 
              "Laos", "Myanmar", "Cambodia", "Vietnam", "Malaysia", "Singapore", "Other"]
 
-# สร้างลิสต์ปี พ.ศ. (ย้อนหลัง 100 ปี)
 current_year_be = datetime.now().year + 543
 YEARS_LIST = list(range(current_year_be, current_year_be - 100, -1))
 
+PROBLEM_LEVELS = [
+    "ไม่มีปัญหา (0-4%)", 
+    "มีปัญหาเล็กน้อย (5-24%)", 
+    "มีปัญหาปานกลาง (25-49%)", 
+    "มีปัญหามาก (50-95%)", 
+    "มีปัญหามากที่สุด (96-100%)"
+]
+
 st.title("🦿 Digital Prosthesis Registry & OM Platform")
 
-# --- 3. สร้าง Tabs ---
-tab1, tab2 = st.tabs(["📋 Patient Registry (ทะเบียนประวัติ)", "⏱️ TUG Test (จับเวลา & แปลผล)"])
+tab1, tab2 = st.tabs(["📋 Patient Registry (ข้อ 1-33)", "⏱️ TUG Test (MDC & Normative)"])
 
 # =========================================================
-# 📌 TAB 1: Patient Registry (ปรับแก้ตาม Requirement)
+# 📌 TAB 1: Patient Registry (Complete Items 1-33)
 # =========================================================
 with tab1:
-    st.header("แบบสำรวจประวัติผู้ใช้ขาเทียม")
+    st.header("แบบสำรวจประวัติผู้ใช้ขาเทียม (Full Version)")
 
-    # --- Module 1: ข้อมูลทั่วไป ---
-    with st.expander("👤 1. ข้อมูลทั่วไป (General Info)", expanded=True):
-        c1, c2, c3 = st.columns(3)
-        with c1:
-            hn = st.text_input("เลขประจำตัวผู้ป่วย (HN)")
-            fname = st.text_input("ชื่อ-นามสกุล")
-            # แก้: เลือกปีเกิด แล้วคำนวณอายุ
-            birth_year = st.selectbox("ปีเกิด (พ.ศ.)", YEARS_LIST, index=40) # Default แถวๆ อายุ 40
+    # --- PART 1: ข้อมูลทั่วไป (1-8) ---
+    with st.expander("👤 1. ข้อมูลทั่วไป (ข้อ 1-8)", expanded=True):
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            birth_year = st.selectbox("1. ปีเกิด (พ.ศ.)", YEARS_LIST, index=40)
             calc_age = current_year_be - birth_year
-            st.info(f"อายุ: {calc_age} ปี")
+            st.caption(f"อายุประมาณ: {calc_age} ปี")
             
+            gender = st.selectbox("2. เพศ", ["ชาย", "หญิง"])
+            
+            country = st.selectbox("3. ประเทศที่อยู่อาศัย", COUNTRIES)
+            if country == "Other": st.text_input("ระบุประเทศ", key="country_ot")
+
+        with col2:
+            province = st.selectbox("4. จังหวัดที่อยู่อาศัย", THAI_PROVINCES)
+            nationality = st.text_input("5. สัญชาติ", value="ไทย")
+            hn = st.text_input("6. เลขประจำตัวผู้ป่วย (HN)")
+        
+        with col3:
+            weight = st.number_input("7. น้ำหนัก (กก.)", 0.0, 200.0, 60.0)
+            height = st.number_input("8. ส่วนสูง (ซม.)", 0, 250, 170)
+
+    # --- PART 2: ประวัติการเจ็บป่วยและการตัดขา (9-17) ---
+    with st.expander("🏥 2. ข้อมูลการตัดขาและสุขภาพ (ข้อ 9-17)"):
+        c1, c2 = st.columns(2)
+        with c1:
+            # ข้อ 9
+            comorb = st.multiselect("9. โรคประจำตัว", ["เบาหวาน", "ความดันโลหิตสูง", "โรคหัวใจ", "โรคไต", "ไม่มี", "Other"])
+            if "Other" in comorb: st.text_input("ระบุโรคประจำตัวอื่นๆ", key="comorb_ot")
+            
+            # ข้อ 10
+            cause = st.selectbox("10. สาเหตุการตัดขา", ["อุบัติเหตุ", "เบาหวาน", "โรคหลอดเลือด", "มะเร็ง", "ติดเชื้อ", "พิการแต่กำเนิด", "Other"])
+            if cause == "Other": st.text_input("ระบุสาเหตุอื่นๆ", key="cause_ot")
+            
+            # ข้อ 11
+            amp_year = st.number_input("11. ปี (พ.ศ.) ที่ตัดขา", 2490, 2600, 2566)
+            
+            # ข้อ 12
+            side = st.radio("12. ข้างที่ตัด", ["ซ้าย", "ขวา", "สองข้าง"], horizontal=True)
+
         with c2:
-            gender = st.selectbox("เพศ", ["ชาย", "หญิง"])
-            weight = st.number_input("น้ำหนัก (กก.)", 0.0, 200.0, 60.0)
-            height = st.number_input("ส่วนสูง (ซม.)", 0, 250, 170)
+            # ข้อ 13
+            amp_level = st.selectbox("13. ระดับการตัดขา", ["Ankle disarticulation", "Transtibial", "Knee disarticulation", "Transfemoral", "Hip disarticulation", "Other"])
+            if amp_level == "Other": st.text_input("ระบุระดับการตัดขา", key="level_ot")
+
+            # ข้อ 14-15
+            sub_c1, sub_c2 = st.columns(2)
+            with sub_c1:
+                stump_len = st.selectbox("14. ความยาวตอขา", ["สั้น", "ปานกลาง", "ยาว"])
+            with sub_c2:
+                stump_shape = st.selectbox("15. รูปทรงตอขา", ["Conical", "Cylindrical", "Bulbous", "Other"])
+                if stump_shape == "Other": st.text_input("ระบุรูปทรง", key="shape_ot")
+            
+            # ข้อ 16
+            surgery = st.radio("16. เคยผ่าตัดแก้ไขตอขาเพิ่มเติมหรือไม่?", ["ไม่ใช่", "ใช่"])
+            if surgery == "ใช่":
+                st.multiselect("16.1 ระบุการผ่าตัด", ["ตัดแต่งกระดูก", "ตัดแต่งผิวหนัง", "ตัดแต่งระดับสูงขึ้น", "Other"])
+            
+            # ข้อ 17
+            k_level = st.selectbox("17. ความสามารถในการเดินก่อนตัดขา (K-level)", ["K0", "K1", "K2", "K3", "K4"])
+
+    # --- PART 3: ประวัติการฟื้นฟู (18-19) ---
+    with st.expander("🩺 3. ข้อมูลการฟื้นฟู (ข้อ 18-19)"):
+        # ข้อ 18
+        st.multiselect("18. บุคลากรที่เคยดูแลท่าน", 
+            ["นักกายอุปกรณ์", "นักกายภาพบำบัด", "นักกิจกรรมบำบัด", "แพทย์เวชศาสตร์ฟื้นฟู", "พยาบาล", "นักจิตวิทยา", "ครอบครัว", "Other"])
         
-        with c3:
-            # แก้: Country & Province Dropdown
-            nationality = st.text_input("สัญชาติ", value="ไทย")
-            country = st.selectbox("ประเทศที่อยู่อาศัย", COUNTRIES)
-            if country == "Other":
-                st.text_input("ระบุประเทศ", key="country_other")
-                
-            province = st.selectbox("จังหวัดที่อยู่อาศัย", THAI_PROVINCES)
+        # ข้อ 19
+        rehab_status = st.radio("19. เคยเข้ารับการฟื้นฟูสมรรถภาพหรือไม่?", ["ไม่เคย", "เคย"])
+        if rehab_status == "เคย":
+            st.multiselect("19.1 กิจกรรมที่เคยทำ", ["สวมถุงลดบวม (Shrinker)", "พันผ้ายืด", "ใส่เบ้าซิลิโคน", "ฝึกเดิน", "ออกกำลังกาย", "Other"])
 
-        st.markdown("---")
-        # ข้อมูลการตัดขา
-        c4, c5 = st.columns(2)
-        with c4:
-            comorbidities = st.multiselect("โรคประจำตัว", ["เบาหวาน", "ความดัน", "โรคหัวใจ", "โรคไต", "ไม่มี", "Other"])
-            if "Other" in comorbidities:
-                st.text_input("ระบุโรคประจำตัวอื่นๆ")
-
-            cause = st.selectbox("สาเหตุการตัดขา", ["อุบัติเหตุ", "เบาหวาน", "โรคหลอดเลือด", "มะเร็ง", "ติดเชื้อ", "Other"])
-            if cause == "Other":
-                st.text_input("ระบุสาเหตุอื่นๆ")
-
-            amp_year = st.number_input("ปี (พ.ศ.) ที่ตัดขา", 2490, 2600, 2566)
+    # --- PART 4: ข้อมูลกายอุปกรณ์ (20-27) ---
+    with st.expander("🦾 4. ข้อมูลกายอุปกรณ์ (ข้อ 20-27)"):
+        # ข้อ 20
+        service = st.multiselect("20. การรับบริการครั้งนี้", ["ทำใหม่", "เปลี่ยนเบ้า", "ซ่อมแซม", "เปลี่ยนชิ้นส่วน", "Other"])
         
-        with c5:
-            side = st.radio("ข้างที่ตัด", ["ซ้าย", "ขวา", "สองข้าง"], horizontal=True)
-            amp_level = st.selectbox("ระดับการตัดขา", ["Ankle disarticulation", "Transtibial", "Knee disarticulation", "Transfemoral", "Other"])
-            if amp_level == "Other":
-                st.text_input("ระบุระดับการตัดขา")
-
-            col_s1, col_s2 = st.columns(2)
-            with col_s1:
-                stump_len = st.selectbox("ความยาวตอขา", ["สั้น", "ปานกลาง", "ยาว"])
-            with col_s2:
-                stump_shape = st.selectbox("รูปทรงตอขา", ["Conical", "Cylindrical", "Bulbous", "Other"])
-                if stump_shape == "Other":
-                    st.text_input("ระบุรูปทรงอื่นๆ")
-
-    # --- Module 3: ข้อมูลกายอุปกรณ์ ---
-    with st.expander("🦾 3. ข้อมูลกายอุปกรณ์ (Prosthesis Info)"):
-        # Logic เลือก Socket ตามระดับการตัดขา
+        d1, d2 = st.columns(2)
+        with d1:
+            st.date_input("21. วันที่หล่อแบบ (Casting Date)")
+        with d2:
+            st.date_input("22. วันที่ได้รับอุปกรณ์ (Delivery Date)")
+        
+        st.divider()
+        st.markdown("**ส่วนประกอบขาเทียม (Components)**")
+        
+        # Logic Socket (ข้อ 23)
         socket_opts = ["Other"]
         if amp_level == "Transtibial":
             socket_opts = ["PTB", "TSB", "Osseointegration", "Other"]
         elif amp_level == "Transfemoral":
             socket_opts = ["Quadrilateral", "Ischial Containment", "Sub Ischial", "Osseointegration", "Other"]
-        # (เพิ่ม Case อื่นๆ ได้ตามต้องการ)
+        elif amp_level == "Knee disarticulation":
+             socket_opts = ["Window opening", "Pad support", "Other"]
 
-        col_p1, col_p2 = st.columns(2)
-        with col_p1:
-            socket = st.selectbox("ชนิดเบ้า (Socket)", socket_opts)
-            if socket == "Other":
-                st.text_input("ระบุชนิดเบ้า")
+        c_comp1, c_comp2 = st.columns(2)
+        with c_comp1:
+            # ข้อ 23
+            sock = st.selectbox("23. ชนิดเบ้า (Socket)", socket_opts)
+            if sock == "Other": st.text_input("ระบุชนิดเบ้า", key="sock_ot")
             
-            liner = st.multiselect("Liner", ["No liner", "Foam", "Silicone", "Gel", "Other"])
-            if "Other" in liner:
-                st.text_input("ระบุ Liner อื่นๆ")
+            # ข้อ 24
+            liner = st.multiselect("24. Liner", ["No liner", "Foam/Pelite", "Silicone", "Gel (TPE)", "Polyurethane", "Socks", "Other"])
+        
+        with c_comp2:
+            # ข้อ 25
+            susp = st.multiselect("25. ระบบยึด (Suspension)", ["Suction", "Pin lock", "Lanyard", "Sleeve", "Cuff/Strap", "Vacuum", "Belt", "Other"])
+            
+            # ข้อ 26
+            foot = st.multiselect("26. เท้าเทียม (Foot)", ["SACH", "Single axis", "Multiaxial", "Dynamic Response", "Hydraulic", "Microprocessor", "Other"])
 
-        with col_p2:
-            suspension = st.multiselect("ระบบยึด (Suspension)", ["Suction", "Pin lock", "Lanyard", "Sleeve", "Belt", "Other"])
-            if "Other" in suspension:
-                st.text_input("ระบุระบบยึดอื่นๆ")
-                
-            foot = st.multiselect("เท้าเทียม (Foot)", ["SACH", "Single axis", "Dynamic", "Microprocessor", "Other"])
-            if "Other" in foot:
-                st.text_input("ระบุชนิดเท้าเทียมอื่นๆ")
+        # ข้อ 27 (เฉพาะระดับสูง)
+        if amp_level in ["Transfemoral", "Knee disarticulation", "Hip disarticulation"]:
+            knee = st.multiselect("27. ข้อเข่าเทียม (Knee)", ["Single axis", "Polycentric", "Lock knee", "Weight-activated brake", "Hydraulic", "Pneumatic", "Microprocessor", "Other"])
 
-    if st.button("💾 บันทึกข้อมูล (SAVE)", type="primary"):
-        st.success("บันทึกข้อมูลเรียบร้อย")
+    # --- PART 5: ข้อมูลทางสังคมและการทำงาน (28-33) ---
+    with st.expander("🌍 5. ข้อมูลทางสังคมและการทำงาน (ข้อ 28-33)"):
+        sc1, sc2 = st.columns(2)
+        with sc1:
+            # ข้อ 28
+            assist = st.selectbox("28. อุปกรณ์ช่วยเดิน", ["ไม่ใช้", "ไม้เท้า (Cane)", "ไม้ค้ำยัน (Crutch)", "Walker", "Wheelchair", "Other"])
+            # ข้อ 29
+            st.selectbox("29.1 เวลาที่ใช้ 'ยืน' ต่อวัน", ["ไม่ได้ยืนเลย", "< 1 ชม.", "1-3 ชม.", "3-7 ชม.", "> 8 ชม."])
+            st.selectbox("29.2 เวลาที่ใช้ 'เดิน' ต่อวัน", ["ไม่ได้เดินเลย", "< 1 ชม.", "1-3 ชม.", "3-7 ชม.", "> 8 ชม."])
+        
+        with sc2:
+            # ข้อ 30
+            fall = st.radio("30. ประวัติการล้ม (ใน 6 เดือน)", ["ไม่มี", "มี"])
+            if fall == "มี":
+                st.selectbox("30.1 ความถี่การล้ม", ["< 1 ครั้ง", "1-2 ครั้ง", "3-4 ครั้ง", "> 4 ครั้ง"])
+                st.checkbox("30.2 ได้รับบาดเจ็บจากการล้ม")
+
+        st.divider()
+        st.markdown("#### การประเมินตนเอง (Self-Evaluation)")
+        
+        # ข้อ 31
+        st.write("31.1 ปัญหาการมีส่วนร่วมในสังคม (เทียบความคาดหวังตนเอง)")
+        st.radio("เลือกระดับปัญหา (ข้อ 31.1)", PROBLEM_LEVELS, key="q31_1", horizontal=True)
+        
+        st.write("31.2 ปัญหาการมีส่วนร่วมในสังคม (เทียบคนปกติ)")
+        st.radio("เลือกระดับปัญหา (ข้อ 31.2)", PROBLEM_LEVELS, key="q31_2", horizontal=True)
+
+        st.markdown("---")
+        
+        # ข้อ 32
+        st.write("32.1 ปัญหาในการทำงาน (เทียบความคาดหวังตนเอง)")
+        st.radio("เลือกระดับปัญหา (ข้อ 32.1)", PROBLEM_LEVELS, key="q32_1", horizontal=True)
+        
+        st.write("32.2 ปัญหาในการทำงาน (เทียบคนปกติ)")
+        st.radio("เลือกระดับปัญหา (ข้อ 32.2)", PROBLEM_LEVELS, key="q32_2", horizontal=True)
+
+        st.markdown("---")
+        # ข้อ 33
+        st.markdown("#### 33. การสนับสนุน (Support)")
+        st.radio("33.1 ท่านเข้าถึงการดูแลจากครอบครัวหรือผู้ดูแลหรือไม่?", ["ไม่ใช่", "ใช่"])
+        
+        supp_org = st.radio("33.2 ท่านเข้าถึงการสนับสนุนจากหน่วยงานต่างๆ หรือไม่? (เช่น สิทธิผู้พิการ, ประกันสังคม)", ["ไม่ใช่", "ใช่"])
+        if supp_org == "ใช่":
+            st.multiselect("ระบุหน่วยงาน", ["หน่วยงานภาครัฐ", "องค์กรไม่แสวงหาผลกำไร", "Other"])
+
+    if st.button("💾 บันทึกข้อมูลลงทะเบียน (SAVE REGISTRY)", type="primary", use_container_width=True):
+        st.success(f"บันทึกข้อมูลคุณ {fname} (HN: {hn}) เรียบร้อยแล้ว")
+
 
 # =========================================================
-# 📌 TAB 2: TUG Test (แก้ระบบจับเวลา: Freeze Time)
+# 📌 TAB 2: TUG Test (MDC & Normative) - Freeze Logic
 # =========================================================
 with tab2:
     st.header("⏱️ Timed Up and Go (TUG)")
     
-    # Session State
-    if 'trials' not in st.session_state:
-        st.session_state.trials = [0.0, 0.0, 0.0]
-    if 'current_trial_idx' not in st.session_state:
-        st.session_state.current_trial_idx = 0
-    if 'timer_start' not in st.session_state:
-        st.session_state.timer_start = None
-    if 'timer_running' not in st.session_state:
-        st.session_state.timer_running = False
-    if 'temp_time' not in st.session_state:
-        st.session_state.temp_time = 0.0  # ตัวแปรเก็บเวลาที่ Freeze ไว้
+    # Init Session State
+    if 'trials' not in st.session_state: st.session_state.trials = [0.0, 0.0, 0.0]
+    if 'current_idx' not in st.session_state: st.session_state.current_idx = 0
+    if 'start_time' not in st.session_state: st.session_state.start_time = None
+    if 'is_running' not in st.session_state: st.session_state.is_running = False
+    if 'frozen_time' not in st.session_state: st.session_state.frozen_time = 0.0
 
-    col_left, col_right = st.columns([1.5, 1])
+    c_left, c_right = st.columns([1.5, 1])
 
-    with col_left:
-        st.markdown(f"### 🏁 ทดสอบครั้งที่ {st.session_state.current_trial_idx + 1} / 3")
+    with c_left:
+        st.subheader(f"🏁 Trial {st.session_state.current_idx + 1} / 3")
         
-        # กล่องนาฬิกา
+        # Clock Container
         with st.container(border=True):
             @st.fragment(run_every=0.1)
             def live_clock():
-                if st.session_state.timer_running:
-                    # กำลังจับเวลา: วิ่งตลอด
-                    elapsed = time.time() - st.session_state.timer_start
-                    st.metric("Time", f"{elapsed:.2f} s")
-                elif st.session_state.temp_time > 0:
-                    # กดหยุดแล้ว: โชว์เวลาค้างไว้ (Freeze)
-                    st.metric("Time", f"{st.session_state.temp_time:.2f} s")
+                if st.session_state.is_running:
+                    # จับเวลาอยู่
+                    val = time.time() - st.session_state.start_time
+                    st.metric("Time", f"{val:.2f} s")
+                elif st.session_state.frozen_time > 0:
+                    # กดหยุด (Freeze)
+                    st.metric("Time", f"{st.session_state.frozen_time:.2f} s")
                 else:
-                    # ยังไม่เริ่ม: โชว์ 0.00
+                    # ยังไม่เริ่ม
                     st.metric("Time", "0.00 s")
             live_clock()
 
-        # ปุ่มควบคุม (Logic ใหม่)
+        # Buttons
         b1, b2, b3 = st.columns(3)
-        
         with b1:
-            # ปุ่ม START
-            if st.button("▶️ START", type="primary", use_container_width=True, 
-                         disabled=st.session_state.timer_running or st.session_state.temp_time > 0):
-                st.session_state.timer_running = True
-                st.session_state.timer_start = time.time()
+            # START
+            if st.button("▶️ START", type="primary", use_container_width=True,
+                         disabled=st.session_state.is_running or st.session_state.frozen_time > 0):
+                st.session_state.is_running = True
+                st.session_state.start_time = time.time()
                 st.rerun()
-
+        
         with b2:
-            # ปุ่ม STOP (กดแล้วเวลาหยุดเดิน แต่ยังไม่บันทึก)
-            if st.button("⏸️ STOP", type="secondary", use_container_width=True, 
-                         disabled=not st.session_state.timer_running):
-                st.session_state.timer_running = False
-                st.session_state.temp_time = time.time() - st.session_state.timer_start
+            # STOP (Freeze)
+            if st.button("⏸️ STOP", type="secondary", use_container_width=True,
+                         disabled=not st.session_state.is_running):
+                st.session_state.is_running = False
+                st.session_state.frozen_time = time.time() - st.session_state.start_time
                 st.rerun()
 
         with b3:
-            # ปุ่ม SAVE & NEXT (ยืนยันเวลา แล้วไปครั้งถัดไป)
-            if st.button("✅ SAVE & NEXT", use_container_width=True, 
-                         disabled=st.session_state.temp_time == 0 or st.session_state.current_trial_idx >= 3):
-                # บันทึกลง List
-                if st.session_state.current_trial_idx < 3:
-                    st.session_state.trials[st.session_state.current_trial_idx] = st.session_state.temp_time
-                    st.session_state.current_trial_idx += 1
-                # รีเซ็ตตัวแปรชั่วคราว
-                st.session_state.temp_time = 0.0
-                st.session_state.timer_running = False
+            # SAVE (Confirm)
+            if st.button("✅ SAVE & NEXT", use_container_width=True,
+                         disabled=st.session_state.frozen_time == 0 or st.session_state.current_idx >= 3):
+                # Save
+                st.session_state.trials[st.session_state.current_idx] = st.session_state.frozen_time
+                # Next
+                if st.session_state.current_idx < 3:
+                    st.session_state.current_idx += 1
+                # Reset Temp
+                st.session_state.frozen_time = 0.0
                 st.rerun()
-        
-        # ปุ่ม Reset กรณีจับพลาด อยากเริ่มใหม่
-        if st.button("❌ ไม่เอา กดผิด (RESET)", disabled=st.session_state.temp_time == 0):
-            st.session_state.temp_time = 0.0
-            st.session_state.timer_running = False
-            st.rerun()
 
+        # Reset Controls
+        if st.button("❌ กดผิด/เริ่มใหม่ (RESET Trial)", disabled=st.session_state.frozen_time == 0):
+            st.session_state.frozen_time = 0.0
+            st.session_state.is_running = False
+            st.rerun()
+        
         if st.button("🔄 ล้างข้อมูลทั้งหมด (Clear All)"):
             st.session_state.trials = [0.0, 0.0, 0.0]
-            st.session_state.current_trial_idx = 0
-            st.session_state.temp_time = 0.0
+            st.session_state.current_idx = 0
+            st.session_state.frozen_time = 0.0
             st.rerun()
 
-    with col_right:
-        st.markdown("### 📝 ผลการทดสอบ")
-        # Input Manual (เผื่อแก้เอง)
+    with c_right:
+        st.markdown("### 📝 Record Summary")
         t1 = st.number_input("Trial 1", value=st.session_state.trials[0], key="t1")
         t2 = st.number_input("Trial 2", value=st.session_state.trials[1], key="t2")
         t3 = st.number_input("Trial 3", value=st.session_state.trials[2], key="t3")
-        
         st.session_state.trials = [t1, t2, t3]
 
-        # คำนวณค่าเฉลี่ย
-        valid_trials = [t for t in st.session_state.trials if t > 0]
-        avg_time = sum(valid_trials) / len(valid_trials) if valid_trials else 0.0
-        
-        st.markdown(f"""
-        <div class="result-box">
-            <h4>📊 Average Time</h4>
-            <h1 style="color:#2E86C1;">{avg_time:.2f} s</h1>
-        </div>
-        """, unsafe_allow_html=True)
+        valid = [x for x in st.session_state.trials if x > 0]
+        avg = sum(valid)/len(valid) if valid else 0.0
 
-    # แปลผล
+        st.info(f"📊 Average: {avg:.2f} s")
+
+    # Interpretation
     st.divider()
-    if avg_time > 0:
-        if avg_time >= 13.5:
-            st.error(f"⚠️ **High Fall Risk** (เสี่ยงล้มสูง)\n\nค่าเฉลี่ย {avg_time:.2f} วินาที (> 13.5 วินาที)")
+    if avg > 0:
+        if avg >= 13.5:
+            st.error(f"⚠️ **High Fall Risk** (เสี่ยงล้มสูง) — Avg {avg:.2f}s (>13.5s)")
         else:
-            st.success(f"✅ **Normal Mobility** (ปกติ)\n\nค่าเฉลี่ย {avg_time:.2f} วินาที (< 13.5 วินาที)")
+            st.success(f"✅ **Normal Mobility** (ปกติ) — Avg {avg:.2f}s")
+        
+        st.caption("MDC (Minimal Detectable Change) for Prosthetic users is ~3.6 seconds.")
