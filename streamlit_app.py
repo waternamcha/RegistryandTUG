@@ -21,7 +21,7 @@ st.markdown("""
 
     /* TUG Timer */
     .tug-display { 
-        font-size: 90px; font-weight: 700; color: #2E86C1; 
+        font-size: 80px; font-weight: 700; color: #2E86C1; 
         text-align: center; background-color: #f4f6f7; 
         padding: 30px; border-radius: 20px; margin-bottom: 20px;
         font-family: 'Courier New', monospace; border: 3px solid #d6eaf8;
@@ -40,6 +40,12 @@ st.markdown("""
     .stSelectbox>div>div>div { border-radius: 8px; }
 
     #MainMenu {visibility: hidden;} footer {visibility: hidden;}
+    
+    /* Mobile Responsive Adjustments */
+    @media (max-width: 600px) {
+        .main-title { font-size: 1.8em; }
+        .tug-display { font-size: 50px; padding: 20px; }
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -110,20 +116,17 @@ def reset_tug():
     st.session_state.tug_status = "-"
     st.session_state.tug_running = False
 
-# --- SAVE TO DATABASE FUNCTION (AUTO) ---
-# --- SAVE TO DATABASE FUNCTION (FULL VERSION) ---
+# --- SAVE TO DATABASE FUNCTION (UTF-8 SIG FIXED) ---
 def save_to_csv():
     if st.session_state.hn == "":
         st.toast('⚠️ ไม่ได้บันทึก: กรุณากรอก HN ก่อน', icon='⚠️')
         return
 
-    # ฟังก์ชันช่วยแปลง List ให้เป็นข้อความ (เช่น ['A', 'B'] -> "A, B") เพื่อไม่ให้ CSV พัง
     def clean_list(val):
         if isinstance(val, list):
             return ", ".join(val)
         return str(val)
 
-    # เก็บข้อมูลทุกอย่างที่มีใน Session State ลง Dictionary
     data = {
         'Timestamp': [datetime.now().strftime('%Y-%m-%d %H:%M:%S')],
         # 1. ข้อมูลทั่วไป
@@ -186,47 +189,54 @@ def save_to_csv():
     df = pd.DataFrame(data)
     file_path = 'prosthesis_database.csv'
     
-    # ถ้าไฟล์ยังไม่มี ให้สร้างใหม่
+    # [FIX] ใช้ utf-8-sig เพื่อให้ Excel บนมือถืออ่านไทยออก
     if not os.path.exists(file_path):
-        df.to_csv(file_path, index=False)
+        df.to_csv(file_path, index=False, encoding='utf-8-sig')
     else:
-        # ถ้ามีไฟล์อยู่แล้ว ให้เช็คว่าจำนวนคอลัมน์เท่ากันไหม (ป้องกัน Error)
-        existing_df = pd.read_csv(file_path)
-        if len(existing_df.columns) != len(df.columns):
-            # ถ้าคอลัมน์ไม่เท่ากัน (เช่น ไฟล์เก่ามีน้อยกว่า) ให้สร้างไฟล์ใหม่ทับไปเลย หรือเปลี่ยนชื่อ
-            # ในที่นี้แนะนำให้เขียนทับเพื่อให้ได้ Format ใหม่
-             df.to_csv(file_path, index=False) # เขียนทับ
-        else:
-             df.to_csv(file_path, mode='a', header=False, index=False) # ต่อท้าย
+        # เช็คว่าไฟล์เดิมมี Column เท่ากันไหม ถ้าไม่เท่าให้เขียนทับ
+        try:
+            existing_df = pd.read_csv(file_path)
+            if len(existing_df.columns) != len(df.columns):
+                df.to_csv(file_path, index=False, encoding='utf-8-sig')
+            else:
+                df.to_csv(file_path, mode='a', header=False, index=False, encoding='utf-8-sig')
+        except:
+             df.to_csv(file_path, index=False, encoding='utf-8-sig')
     
-    st.toast(f'✅ บันทึก HN: {st.session_state.hn} ครบถ้วน!', icon='💾')
+    st.toast(f'✅ บันทึก HN: {st.session_state.hn} เรียบร้อย!', icon='💾')
 
 # ---------------------------------------------------------
-# 3. HTML REPORT
+# 3. HTML REPORT (META TAG FIXED)
 # ---------------------------------------------------------
 def create_html():
     dob = st.session_state.dob.strftime('%d/%m/%Y')
     age_calc = date.today().year - st.session_state.dob.year
     
+    # [FIX] เพิ่ม <meta charset="UTF-8"> และ viewport เพื่อให้มือถืออ่านออก
     html = f"""
     <!DOCTYPE html>
-    <html>
+    <html lang="th">
     <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Report_{st.session_state.hn}</title>
         <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
         <style>
-            body {{ font-family: 'Sarabun', sans-serif; padding: 40px; color: #333; }}
-            h1 {{ text-align: center; border-bottom: 2px solid #1F618D; padding-bottom: 10px; color: #1F618D; }}
-            .section {{ margin-top: 25px; background: #f8f9fa; padding: 15px; border-radius: 8px; }}
+            body {{ font-family: 'Sarabun', sans-serif; padding: 20px; color: #333; line-height: 1.6; }}
+            h1 {{ text-align: center; border-bottom: 2px solid #1F618D; padding-bottom: 10px; color: #1F618D; font-size: 1.5em; }}
+            .section {{ margin-top: 20px; background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #ddd; }}
             .sec-head {{ color: #154360; font-weight: bold; font-size: 1.1em; margin-bottom: 10px; border-left: 4px solid #154360; padding-left: 8px; }}
             table {{ width: 100%; border-collapse: collapse; }}
-            td {{ padding: 6px; border-bottom: 1px solid #eee; vertical-align: top; }}
-            .lbl {{ font-weight: bold; width: 35%; color: #555; }}
-            .tug-box {{ text-align: center; border: 2px solid #1F618D; padding: 15px; margin-top: 20px; border-radius: 10px; }}
+            td {{ padding: 6px; border-bottom: 1px solid #eee; vertical-align: top; font-size: 0.9em; }}
+            .lbl {{ font-weight: bold; width: 40%; color: #555; }}
+            .tug-box {{ text-align: center; border: 2px solid #1F618D; padding: 15px; margin-top: 20px; border-radius: 10px; background: #f0f8ff; }}
+            @media print {{ body {{ padding: 0; }} .section {{ break-inside: avoid; }} }}
         </style>
     </head>
     <body>
-        <div style="text-align:right; font-size:0.8em;">พิมพ์เมื่อ: {datetime.now().strftime('%d/%m/%Y %H:%M')}</div>
+        <div style="text-align:right; font-size:0.8em; color:gray;">พิมพ์เมื่อ: {datetime.now().strftime('%d/%m/%Y %H:%M')}</div>
         <h1>แบบบันทึกข้อมูลกายอุปกรณ์ (Prosthesis Registry)</h1>
+        
         <div class="section"><div class="sec-head">1. ข้อมูลทั่วไป</div>
         <table>
             <tr><td class="lbl">1. วันเกิด (อายุ):</td><td>{dob} ({age_calc} ปี)</td></tr>
@@ -238,6 +248,7 @@ def create_html():
             <tr><td class="lbl">ชื่อ-นามสกุล:</td><td>{st.session_state.fname}</td></tr>
             <tr><td class="lbl">7. น้ำหนัก/ส่วนสูง:</td><td>{st.session_state.weight} กก. / {st.session_state.height} ซม.</td></tr>
         </table></div>
+
         <div class="section"><div class="sec-head">2. ข้อมูลทางการแพทย์</div>
         <table>
             <tr><td class="lbl">9. โรคประจำตัว:</td><td>{get_txt(st.session_state.comorbidities, 'comorb_ot')}</td></tr>
@@ -247,6 +258,7 @@ def create_html():
             <tr><td class="lbl">13. ระดับ:</td><td>{get_txt(st.session_state.level, 'level_ot')}</td></tr>
             <tr><td class="lbl">17. K-Level:</td><td>{st.session_state.k_level}</td></tr>
         </table></div>
+
         <div class="section"><div class="sec-head">3-4. กายอุปกรณ์</div>
         <table>
             <tr><td class="lbl">20. บริการ:</td><td>{get_txt(st.session_state.service, 'service_ot')}</td></tr>
@@ -254,6 +266,7 @@ def create_html():
             <tr><td class="lbl">25. Suspension:</td><td>{get_txt(st.session_state.suspension, 'susp_ot')}</td></tr>
             <tr><td class="lbl">26. Foot:</td><td>{get_txt(st.session_state.foot, 'foot_ot')}</td></tr>
         </table></div>
+
         <div class="tug-box">
             <h3>ผล TUG Test</h3>
             <h1>{st.session_state.tug_avg:.2f} s</h1>
@@ -267,10 +280,8 @@ def create_html():
 # ---------------------------------------------------------
 # 4. APP LAYOUT
 # ---------------------------------------------------------
-# HTML Data Prep
 html_data = create_html()
 
-# Header & Actions
 col_h1, col_h2 = st.columns([3, 1])
 with col_h1:
     st.markdown('<div class="main-title">🏥 Digital Prosthesis Registry</div>', unsafe_allow_html=True)
@@ -279,7 +290,6 @@ with col_h1:
 with col_h2:
     st.write("") 
     st.write("") 
-    # Download + Auto Save
     st.download_button(
         "📥 Download & Auto-Save",
         data=io.BytesIO(html_data.encode('utf-8')),
@@ -290,7 +300,6 @@ with col_h2:
         on_click=save_to_csv
     )
 
-# Sidebar
 st.sidebar.markdown("### 📥 Report Management")
 st.sidebar.info("การกดปุ่ม Download จะทำการบันทึกข้อมูลลงฐานข้อมูล (CSV) โดยอัตโนมัติ")
 
@@ -303,14 +312,14 @@ st.sidebar.download_button(
     on_click=save_to_csv
 )
 
-# --- ส่วนจัดการ Database ---
+# --- Database Management ---
 st.sidebar.markdown("---")
 st.sidebar.markdown("### 📊 Database Management")
 
-# ปุ่มโหลดไฟล์ CSV (Database) ตัวจริง
 if os.path.exists('prosthesis_database.csv'):
     df_db = pd.read_csv('prosthesis_database.csv')
-    csv_data = df_db.to_csv(index=False).encode('utf-8')
+    # [FIX] encode เป็น utf-8-sig เวลาดาวน์โหลด CSV
+    csv_data = df_db.to_csv(index=False).encode('utf-8-sig')
     
     st.sidebar.download_button(
         label="📊 Download Database (CSV)",
@@ -329,7 +338,6 @@ else:
 # --- TABS ---
 tab1, tab2 = st.tabs(["📝 Registry Form", "⏱️ TUG Test"])
 
-# === TAB 1: REGISTRY ===
 with tab1:
     with st.expander("1. ข้อมูลทั่วไป (General Info)", expanded=True):
         st.date_input("1. วัน/เดือน/ปีเกิด (Date of Birth)", key="dob")
@@ -413,7 +421,6 @@ with tab1:
             st.multiselect("ระบุองค์กร", ["รัฐ", "ไม่แสวงหากำไร", "จ่ายเอง", "Other"], key="supp_src")
             if "Other" in st.session_state.supp_src: st.text_input("ระบุองค์กรอื่น", key="supp_src_ot")
 
-# === TAB 2: TUG TEST ===
 with tab2:
     st.markdown('<div class="section-title" style="text-align:center; border:none; margin-top:20px;">⏱️ Timed Up and Go Test</div>', unsafe_allow_html=True)
     if st.session_state.tug_running:
