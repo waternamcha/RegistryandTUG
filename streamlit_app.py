@@ -260,8 +260,6 @@ with tab1:
     st.markdown('<div class="form-card">', unsafe_allow_html=True)
     st.markdown('<div class="section-title">1. ข้อมูลทั่วไป (General Info)</div>', unsafe_allow_html=True)
     
-    # แก้ไขการเรียกใช้ st.widget โดยไม่ assign ค่ากลับไปที่ session_state
-    
     st.date_input("1. วัน/เดือน/ปีเกิด (Date of Birth)", key="dob")
     
     # Auto calc age display
@@ -424,25 +422,7 @@ with tab2:
     
     st.markdown("---")
     c1, c2, c3 = st.columns(3)
-    st.number_input("Trial 1", value=st.session_state.t1, on_change=calculate_tug, key="t1_input", args=(), kwargs={})
-    # หมายเหตุ: การใช้ on_change กับ key ซ้ำอาจจะ error ได้ในบาง pattern
-    # เพื่อความชัวร์ที่สุด ให้ใช้ key ปกติแล้วเรียก calculate_tug ตอนจบ หรือใช้ session state ตรงๆ
-    # แก้ไข: ใช้ key="t1" ตรงๆ แล้วไม่ต้องรับค่า return
-    
-    # เพื่อความชัวร์และไม่ซับซ้อน:
-    # เราใช้ st.number_input ผูกกับ session state key="t1" อยู่แล้ว
-    # ดังนั้นแค่เรียก st.number_input(..., key="t1", on_change=calculate_tug) ก็พอ
-    # แต่ต้องระวัง loop callback
-    
-    # Code ด้านล่างนี้คือแบบที่ถูกต้องที่สุดสำหรับ Streamlit ล่าสุด:
-    # ถ้า key="t1" ค่าจะถูก update เข้า session_state.t1 อัตโนมัติ
-    # เราสามารถใช้ on_change=calculate_tug ได้เลย
-    
-    # *แต่* เพื่อป้องกัน error ที่เคยเจอ (duplicate widget ID or session state set error)
-    # ผมจะลบ st.session_state.t1 = ... ออก และใช้ key อย่างเดียว
-    
-    pass
-
+    # FIX: Cleaned up st.number_input to avoid duplicate logic error
     st.number_input("Trial 1", key="t1", on_change=calculate_tug)
     st.number_input("Trial 2", key="t2", on_change=calculate_tug)
     st.number_input("Trial 3", key="t3", on_change=calculate_tug)
