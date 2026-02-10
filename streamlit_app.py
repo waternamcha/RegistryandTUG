@@ -112,12 +112,10 @@ def reset_tug():
 
 # --- SAVE TO DATABASE FUNCTION (AUTO) ---
 def save_to_csv():
-    # ตรวจสอบ HN ก่อนบันทึก
     if st.session_state.hn == "":
-        st.toast('⚠️ ไม่ได้บันทึก: กรุณากรอก HN ก่อนดาวน์โหลด', icon='⚠️')
+        st.toast('⚠️ ไม่ได้บันทึก: กรุณากรอก HN ก่อน', icon='⚠️')
         return
 
-    # เตรียมข้อมูล
     data = {
         'Timestamp': [datetime.now().strftime('%Y-%m-%d %H:%M:%S')],
         'HN': [st.session_state.hn],
@@ -136,13 +134,12 @@ def save_to_csv():
     df = pd.DataFrame(data)
     file_path = 'prosthesis_database.csv'
     
-    # บันทึกไฟล์ (Append mode)
     if not os.path.exists(file_path):
         df.to_csv(file_path, index=False)
     else:
         df.to_csv(file_path, mode='a', header=False, index=False)
     
-    st.toast(f'✅ บันทึกข้อมูล HN: {st.session_state.hn} ลง Database แล้ว!', icon='💾')
+    st.toast(f'✅ บันทึก HN: {st.session_state.hn} ลง Database แล้ว!', icon='💾')
 
 # ---------------------------------------------------------
 # 3. HTML REPORT
@@ -222,7 +219,7 @@ with col_h1:
 with col_h2:
     st.write("") 
     st.write("") 
-    # ปุ่ม Download ที่มุมขวาบน (เพิ่ม on_click=save_to_csv)
+    # Download + Auto Save
     st.download_button(
         "📥 Download & Auto-Save",
         data=io.BytesIO(html_data.encode('utf-8')),
@@ -230,30 +227,46 @@ with col_h2:
         mime="text/html",
         type="primary",
         use_container_width=True,
-        on_click=save_to_csv  # <<--- KEY: บันทึกเมื่อกดดาวน์โหลด
+        on_click=save_to_csv
     )
 
 # Sidebar
 st.sidebar.markdown("### 📥 Report Management")
 st.sidebar.info("การกดปุ่ม Download จะทำการบันทึกข้อมูลลงฐานข้อมูล (CSV) โดยอัตโนมัติ")
-# ปุ่ม Download ที่ Sidebar (เพิ่ม on_click=save_to_csv)
+
 st.sidebar.download_button(
     "📄 Download HTML Report",
     data=io.BytesIO(html_data.encode('utf-8')),
     file_name=f"Report_{st.session_state.hn}.html",
     mime="text/html",
     use_container_width=True,
-    on_click=save_to_csv  # <<--- KEY: บันทึกเมื่อกดดาวน์โหลด
+    on_click=save_to_csv
 )
 
-# Show Database Preview
-with st.sidebar.expander("📊 ดูข้อมูลที่บันทึกไว้ (Database)"):
-    if os.path.exists('prosthesis_database.csv'):
-        df_show = pd.read_csv('prosthesis_database.csv')
-        st.dataframe(df_show)
-    else:
-        st.info("ยังไม่มีข้อมูลในระบบ")
+# --- ส่วนจัดการ Database ---
+st.sidebar.markdown("---")
+st.sidebar.markdown("### 📊 Database Management")
 
+# ปุ่มโหลดไฟล์ CSV (Database) ตัวจริง
+if os.path.exists('prosthesis_database.csv'):
+    df_db = pd.read_csv('prosthesis_database.csv')
+    csv_data = df_db.to_csv(index=False).encode('utf-8')
+    
+    st.sidebar.download_button(
+        label="📊 Download Database (CSV)",
+        data=csv_data,
+        file_name="prosthesis_database.csv",
+        mime="text/csv",
+        use_container_width=True,
+        type="secondary"
+    )
+    
+    with st.sidebar.expander("👀 ดูตัวอย่างข้อมูล"):
+        st.dataframe(df_db)
+else:
+    st.sidebar.warning("ยังไม่มีไฟล์ Database")
+
+# --- TABS ---
 tab1, tab2 = st.tabs(["📝 Registry Form", "⏱️ TUG Test"])
 
 # === TAB 1: REGISTRY ===
