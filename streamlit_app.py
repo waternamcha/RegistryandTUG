@@ -261,13 +261,13 @@ with tab1:
 
 
 # =========================================================
-# 📌 TAB 2: TUG Test (Manual Recording Mode)
+# 📌 TAB 2: TUG Test (Stopwatch + Manual Input + Auto Calc)
 # =========================================================
 with tab2:
     st.header("⏱️ Timed Up and Go (TUG)")
-    st.info("💡 **Instructions:** กด Start เพื่อจับเวลา -> กด Stop เพื่อหยุด (เวลาจะค้างไว้) -> พิมพ์เวลาลงในช่อง Trial ด้านขวา")
+    st.info("💡 **วิธีใช้งาน:** กด Start/Stop เพื่อจับเวลา -> นำเวลาที่ได้มากรอกลงในช่องด้านขวา -> ผลลัพธ์จะแสดงอัตโนมัติ")
     
-    # Init Session State สำหรับนาฬิกาเท่านั้น
+    # Init Session State (สำหรับนาฬิกา)
     if 'is_running' not in st.session_state: st.session_state.is_running = False
     if 'start_time' not in st.session_state: st.session_state.start_time = None
     if 'stopwatch_value' not in st.session_state: st.session_state.stopwatch_value = 0.0
@@ -278,20 +278,18 @@ with tab2:
     with c_left:
         st.subheader("Stopwatch")
         
-        # Clock Display
+        # Display Clock
         with st.container(border=True):
             @st.fragment(run_every=0.1)
             def live_clock():
                 if st.session_state.is_running:
-                    # จับเวลาวิ่งอยู่
                     elapsed = time.time() - st.session_state.start_time
                     st.metric("Time", f"{elapsed:.2f} s")
                 else:
-                    # หยุดแล้ว หรือยังไม่เริ่ม (แสดงค่าที่ค้างไว้)
                     st.metric("Time", f"{st.session_state.stopwatch_value:.2f} s")
             live_clock()
 
-        # Buttons (Simple: Start, Stop, Clear)
+        # Buttons
         b1, b2, b3 = st.columns(3)
         with b1:
             if st.button("▶️ START", type="primary", use_container_width=True, 
@@ -304,46 +302,56 @@ with tab2:
             if st.button("⏸️ STOP", type="secondary", use_container_width=True, 
                          disabled=not st.session_state.is_running):
                 st.session_state.is_running = False
-                # คำนวณเวลาที่หยุดแล้วเก็บไว้ในตัวแปร
                 st.session_state.stopwatch_value = time.time() - st.session_state.start_time
                 st.rerun()
 
         with b3:
-            if st.button("🔄 CLEAR / RESET", use_container_width=True):
+            if st.button("🔄 RESET Clock", use_container_width=True):
                 st.session_state.is_running = False
                 st.session_state.stopwatch_value = 0.0
                 st.rerun()
 
     # --- ส่วนบันทึกและคำนวณ (Right Column) ---
     with c_right:
-        st.subheader("📝 Record Data")
+        st.subheader("📝 Record & Result")
         
-        # ช่องกรอกข้อมูล (ให้ User กรอกเอง)
-        t1 = st.number_input("Trial 1 (seconds)", min_value=0.0, step=0.01, format="%.2f")
-        t2 = st.number_input("Trial 2 (seconds)", min_value=0.0, step=0.01, format="%.2f")
-        t3 = st.number_input("Trial 3 (seconds)", min_value=0.0, step=0.01, format="%.2f")
+        # ช่องกรอก (ทำงานทันทีที่พิมพ์เสร็จ/กด Enter)
+        t1 = st.number_input("Trial 1 (s)", min_value=0.0, step=0.01, format="%.2f", key="t1")
+        t2 = st.number_input("Trial 2 (s)", min_value=0.0, step=0.01, format="%.2f", key="t2")
+        t3 = st.number_input("Trial 3 (s)", min_value=0.0, step=0.01, format="%.2f", key="t3")
 
-        # คำนวณค่าเฉลี่ย
-        trials = [t for t in [t1, t2, t3] if t > 0] # คิดเฉพาะช่องที่มีค่า
+        st.divider()
+
+        # Logic คำนวณ (คำนวณสดๆ ทุกครั้งที่หน้าเว็บ Rerun)
+        valid_trials = [t for t in [t1, t2, t3] if t > 0]
         
-        if trials:
-            avg_time = sum(trials) / len(trials)
+        if valid_trials:
+            avg_time = sum(valid_trials) / len(valid_trials)
             
-            st.markdown(f"""
-            <div class="result-box">
-                <h4>📊 Average Time</h4>
-                <h1 style="color:#1F618D; margin:0;">{avg_time:.2f} s</h1>
-            </div>
-            """, unsafe_allow_html=True)
+            # ตัดเกรด
+            is_risk = avg_time >= 13.5
             
-            # แปลผล (Interpretation)
-            st.divider()
-            if avg_time >= 13.5:
-                st.error(f"⚠️ **High Fall Risk** (เสี่ยงล้มสูง)\n\nAvg: {avg_time:.2f} s (> 13.5 s)")
+            # แสดงผล
+            st.markdown("##### 📊 ผลการแปลผล (Interpretation)")
+            
+            if is_risk:
+                st.markdown(f"""
+                <div class="result-box-risk">
+                    <h3>⚠️ High Fall Risk</h3>
+                    <h1 style="color:#C0392B; margin:0;">{avg_time:.2f} s</h1>
+                    <p>(Average Time >= 13.5 s)</p>
+                </div>
+                """, unsafe_allow_html=True)
             else:
-                st.success(f"✅ **Normal Mobility** (ปกติ)\n\nAvg: {avg_time:.2f} s (< 13.5 s)")
-                
-            st.info("ℹ️ **MDC:** ความเปลี่ยนแปลงที่สำคัญทางคลินิกคือ **3.6 วินาที**")
+                st.markdown(f"""
+                <div class="result-box-normal">
+                    <h3>✅ Normal Mobility</h3>
+                    <h1 style="color:#28B463; margin:0;">{avg_time:.2f} s</h1>
+                    <p>(Average Time < 13.5 s)</p>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            st.caption("ℹ️ MDC (Minimal Detectable Change): 3.6 seconds")
             
         else:
-            st.info("กรุณากรอกข้อมูลเวลาอย่างน้อย 1 ช่องเพื่อคำนวณ")
+            st.info("👈 กรุณากรอกเวลาอย่างน้อย 1 ช่อง เพื่อดูผลลัพธ์")
