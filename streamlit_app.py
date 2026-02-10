@@ -1,6 +1,5 @@
 import streamlit as st
 import time
-import io
 import pandas as pd
 import os
 from datetime import datetime, date
@@ -11,7 +10,7 @@ from datetime import datetime, date
 st.set_page_config(page_title="Prosthesis Registry", layout="wide", page_icon="🦿")
 
 def init_state():
-    # กำหนดค่าเริ่มต้น (ใช้ 0.0 เพื่อให้เป็น Float สำหรับ TUG)
+    # กำหนดค่าเริ่มต้นทั้งหมด
     defaults = {
         # 1. General
         'hn': '', 'fname': '', 'dob': date(1980, 1, 1), 
@@ -55,26 +54,8 @@ def init_state():
 init_state()
 
 # ---------------------------------------------------------
-# 2. STYLES & HELPERS
+# 2. HELPER FUNCTIONS
 # ---------------------------------------------------------
-st.markdown("""
-    <style>
-    @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap');
-    html, body, [class*="css"] { font-family: 'Sarabun', sans-serif; }
-    .main-title { text-align: center; font-size: 2.2em; font-weight: 700; color: #154360; margin-bottom: 5px; }
-    .tug-display { 
-        font-size: 80px; font-weight: 700; color: #2E86C1; 
-        text-align: center; background-color: #f4f6f7; 
-        padding: 30px; border-radius: 20px; margin-bottom: 20px;
-        border: 3px solid #d6eaf8; font-family: 'Courier New', monospace;
-    }
-    .result-box {
-        padding: 20px; border-radius: 15px; text-align: center; 
-        color: white; font-weight: bold; font-size: 1.3em; margin-top: 15px;
-    }
-    </style>
-""", unsafe_allow_html=True)
-
 def fmt_report(key, ot_key=None):
     val = st.session_state.get(key, '-')
     if isinstance(val, list):
@@ -87,13 +68,12 @@ def fmt_report(key, ot_key=None):
         return f"{val} ({st.session_state.get(ot_key, '')})"
     return str(val) if val else "-"
 
-# Logic คำนวณ TUG (แยกออกมาเรียกใช้ได้ตลอด)
+# Logic คำนวณ TUG (Fix Update)
 def calculate_tug_logic():
-    # ดึงค่าปัจจุบันจาก session_state
     v1 = st.session_state.t1
     v2 = st.session_state.t2
     v3 = st.session_state.t3
-    times = [t for t in [v1, v2, v3] if t > 0]
+    times = [t for t in [v1, v2, v3] if t > 0.01] # กรองค่า 0 ทิ้ง
     
     if times:
         avg = sum(times) / len(times)
@@ -112,7 +92,7 @@ def reset_tug():
     st.session_state.tug_running = False
 
 # ---------------------------------------------------------
-# 3. HTML & CSV
+# 3. HTML REPORT & CSV
 # ---------------------------------------------------------
 def create_html():
     dob_str = st.session_state.dob.strftime('%d/%m/%Y')
@@ -123,8 +103,6 @@ def create_html():
     <html lang="th">
     <head>
         <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Report_{st.session_state.hn}</title>
         <style>
             body {{ font-family: 'Sarabun', sans-serif; padding: 20px; color: #333; }}
             h1 {{ text-align: center; color: #1F618D; margin-bottom: 5px; }}
@@ -217,7 +195,7 @@ def save_csv():
 # ---------------------------------------------------------
 col1, col2 = st.columns([3, 1])
 with col1:
-    st.markdown('<div class="main-title">🏥 Prosthesis Registry System</div>', unsafe_allow_html=True)
+    st.markdown('<h1 style="color:#154360;">🏥 Prosthesis Registry System</h1>', unsafe_allow_html=True)
 with col2:
     st.write("")
     st.write("")
@@ -304,21 +282,27 @@ with tab1:
         if st.session_state.supp_org_access == "ใช่": st.multiselect("แหล่งทุน", ["รัฐ", "ประกันสังคม", "Other"], key="supp_org_type")
 
 with tab2:
-    st.markdown('<div class="main-title">⏱️ TUG Test</div>', unsafe_allow_html=True)
+    st.markdown("""
+        <style>
+        .tug-box { font-size: 80px; font-weight: bold; color: #1F618D; text-align: center; background: #E8F6F3; padding: 20px; border-radius: 15px; margin-bottom: 20px; }
+        </style>
+    """, unsafe_allow_html=True)
+    
+    st.markdown('<div style="text-align:center;"><h3>⏱️ Timed Up and Go Test</h3></div>', unsafe_allow_html=True)
     
     # ------------------ TIMER LOGIC FIXED ------------------
     if st.session_state.tug_running:
         elapsed = time.time() - st.session_state.start_time
-        st.markdown(f'<div class="tug-display">{elapsed:.2f} s</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="tug-box">{elapsed:.2f} s</div>', unsafe_allow_html=True)
         
         if st.button("⏹️ STOP", type="primary", use_container_width=True):
             st.session_state.tug_running = False
-            final_time = float(f"{elapsed:.2f}") # Force 2 decimals
+            final_time = round(elapsed, 2) # ปัดเศษให้เป๊ะ
             
             # Logic: เติมช่องว่างเรียงลำดับ t1 -> t2 -> t3
-            if st.session_state.t1 == 0: st.session_state.t1 = final_time
-            elif st.session_state.t2 == 0: st.session_state.t2 = final_time
-            elif st.session_state.t3 == 0: st.session_state.t3 = final_time
+            if st.session_state.t1 <= 0.01: st.session_state.t1 = final_time
+            elif st.session_state.t2 <= 0.01: st.session_state.t2 = final_time
+            elif st.session_state.t3 <= 0.01: st.session_state.t3 = final_time
             
             calculate_tug_logic() # คำนวณทันที
             st.rerun() # รีเฟรชหน้าจอ
@@ -326,7 +310,7 @@ with tab2:
         time.sleep(0.05) # Refresh rate
         st.rerun()
     else:
-        st.markdown(f'<div class="tug-display" style="color:#ccc;">0.00 s</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="tug-box" style="color:#aaa;">0.00 s</div>', unsafe_allow_html=True)
         if st.button("▶️ START", type="primary", use_container_width=True):
             st.session_state.start_time = time.time()
             st.session_state.tug_running = True
@@ -337,11 +321,11 @@ with tab2:
     # ------------------ INPUTS FIXED (STEP=0.01) ------------------
     # ใช้ on_change=calculate_tug_logic เพื่อให้คำนวณทันทีที่กรอกมือ
     c1, c2, c3 = st.columns(3)
-    st.number_input("Trial 1 (วินาที)", key="t1", step=0.01, format="%.2f", on_change=calculate_tug_logic)
-    st.number_input("Trial 2 (วินาที)", key="t2", step=0.01, format="%.2f", on_change=calculate_tug_logic)
-    st.number_input("Trial 3 (วินาที)", key="t3", step=0.01, format="%.2f", on_change=calculate_tug_logic)
+    st.number_input("Trial 1 (s)", key="t1", step=0.01, format="%.2f", on_change=calculate_tug_logic)
+    st.number_input("Trial 2 (s)", key="t2", step=0.01, format="%.2f", on_change=calculate_tug_logic)
+    st.number_input("Trial 3 (s)", key="t3", step=0.01, format="%.2f", on_change=calculate_tug_logic)
     
-    st.button("🔄 ล้างค่าเวลาทั้งหมด", on_click=reset_tug, use_container_width=True)
+    st.button("🔄 Reset Timer", on_click=reset_tug, use_container_width=True)
 
     # Force Calculate (กรณี Callback หลุด)
     calculate_tug_logic()
@@ -349,8 +333,9 @@ with tab2:
     if st.session_state.tug_avg > 0:
         bg = "#C0392B" if st.session_state.tug_avg >= 13.5 else "#27AE60"
         st.markdown(f"""
-        <div class="result-box" style="background:{bg};">
-            <div>Average Time: {st.session_state.tug_avg:.2f} s</div>
-            <div style="font-size:1.5em; margin-top:5px;">{st.session_state.tug_status}</div>
+        <div style="background-color:{bg}; padding:20px; border-radius:10px; color:white; text-align:center; margin-top:20px;">
+            <div style="font-size:1.2em;">Average Time</div>
+            <div style="font-size:3em; font-weight:bold;">{st.session_state.tug_avg:.2f} s</div>
+            <div style="font-size:1.5em; margin-top:10px;">{st.session_state.tug_status}</div>
         </div>
         """, unsafe_allow_html=True)
