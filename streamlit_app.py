@@ -261,98 +261,89 @@ with tab1:
 
 
 # =========================================================
-# 📌 TAB 2: TUG Test (MDC & Normative)
+# 📌 TAB 2: TUG Test (Manual Recording Mode)
 # =========================================================
 with tab2:
     st.header("⏱️ Timed Up and Go (TUG)")
+    st.info("💡 **Instructions:** กด Start เพื่อจับเวลา -> กด Stop เพื่อหยุด (เวลาจะค้างไว้) -> พิมพ์เวลาลงในช่อง Trial ด้านขวา")
     
-    # Init Session State
-    if 'trials' not in st.session_state: st.session_state.trials = [0.0, 0.0, 0.0]
-    if 'current_idx' not in st.session_state: st.session_state.current_idx = 0
-    if 'start_time' not in st.session_state: st.session_state.start_time = None
+    # Init Session State สำหรับนาฬิกาเท่านั้น
     if 'is_running' not in st.session_state: st.session_state.is_running = False
-    if 'frozen_time' not in st.session_state: st.session_state.frozen_time = 0.0
+    if 'start_time' not in st.session_state: st.session_state.start_time = None
+    if 'stopwatch_value' not in st.session_state: st.session_state.stopwatch_value = 0.0
 
     c_left, c_right = st.columns([1.5, 1])
 
+    # --- ส่วนนาฬิกา (Left Column) ---
     with c_left:
-        st.subheader(f"🏁 Trial {st.session_state.current_idx + 1} / 3")
+        st.subheader("Stopwatch")
         
-        # Clock Container
+        # Clock Display
         with st.container(border=True):
             @st.fragment(run_every=0.1)
             def live_clock():
                 if st.session_state.is_running:
-                    # จับเวลาอยู่
-                    val = time.time() - st.session_state.start_time
-                    st.metric("Time", f"{val:.2f} s")
-                elif st.session_state.frozen_time > 0:
-                    # กดหยุด (Freeze)
-                    st.metric("Time", f"{st.session_state.frozen_time:.2f} s")
+                    # จับเวลาวิ่งอยู่
+                    elapsed = time.time() - st.session_state.start_time
+                    st.metric("Time", f"{elapsed:.2f} s")
                 else:
-                    # ยังไม่เริ่ม
-                    st.metric("Time", "0.00 s")
+                    # หยุดแล้ว หรือยังไม่เริ่ม (แสดงค่าที่ค้างไว้)
+                    st.metric("Time", f"{st.session_state.stopwatch_value:.2f} s")
             live_clock()
 
-        # Buttons
+        # Buttons (Simple: Start, Stop, Clear)
         b1, b2, b3 = st.columns(3)
         with b1:
-            # START
-            if st.button("▶️ START", type="primary", use_container_width=True,
-                         disabled=st.session_state.is_running or st.session_state.frozen_time > 0):
+            if st.button("▶️ START", type="primary", use_container_width=True, 
+                         disabled=st.session_state.is_running):
                 st.session_state.is_running = True
                 st.session_state.start_time = time.time()
                 st.rerun()
         
         with b2:
-            # STOP (Freeze)
-            if st.button("⏸️ STOP", type="secondary", use_container_width=True,
+            if st.button("⏸️ STOP", type="secondary", use_container_width=True, 
                          disabled=not st.session_state.is_running):
                 st.session_state.is_running = False
-                st.session_state.frozen_time = time.time() - st.session_state.start_time
+                # คำนวณเวลาที่หยุดแล้วเก็บไว้ในตัวแปร
+                st.session_state.stopwatch_value = time.time() - st.session_state.start_time
                 st.rerun()
 
         with b3:
-            # SAVE (Confirm)
-            if st.button("✅ SAVE & NEXT", use_container_width=True,
-                         disabled=st.session_state.frozen_time == 0 or st.session_state.current_idx >= 3):
-                # Save
-                st.session_state.trials[st.session_state.current_idx] = st.session_state.frozen_time
-                # Next
-                if st.session_state.current_idx < 3:
-                    st.session_state.current_idx += 1
-                # Reset Temp
-                st.session_state.frozen_time = 0.0
+            if st.button("🔄 CLEAR / RESET", use_container_width=True):
+                st.session_state.is_running = False
+                st.session_state.stopwatch_value = 0.0
                 st.rerun()
 
-        # Reset Controls
-        if st.button("❌ กดผิด/เริ่มใหม่ (RESET Trial)", disabled=st.session_state.frozen_time == 0):
-            st.session_state.frozen_time = 0.0
-            st.session_state.is_running = False
-            st.rerun()
-        
-        if st.button("🔄 ล้างข้อมูลทั้งหมด (Clear All)"):
-            st.session_state.trials = [0.0, 0.0, 0.0]
-            st.session_state.current_idx = 0
-            st.session_state.frozen_time = 0.0
-            st.rerun()
-
+    # --- ส่วนบันทึกและคำนวณ (Right Column) ---
     with c_right:
-        st.markdown("### 📝 Record Summary")
-        t1 = st.number_input("Trial 1", value=st.session_state.trials[0], key="t1")
-        t2 = st.number_input("Trial 2", value=st.session_state.trials[1], key="t2")
-        t3 = st.number_input("Trial 3", value=st.session_state.trials[2], key="t3")
-        st.session_state.trials = [t1, t2, t3]
+        st.subheader("📝 Record Data")
+        
+        # ช่องกรอกข้อมูล (ให้ User กรอกเอง)
+        t1 = st.number_input("Trial 1 (seconds)", min_value=0.0, step=0.01, format="%.2f")
+        t2 = st.number_input("Trial 2 (seconds)", min_value=0.0, step=0.01, format="%.2f")
+        t3 = st.number_input("Trial 3 (seconds)", min_value=0.0, step=0.01, format="%.2f")
 
-        valid = [x for x in st.session_state.trials if x > 0]
-        avg = sum(valid)/len(valid) if valid else 0.0
-
-        st.info(f"📊 Average: {avg:.2f} s")
-
-    # Interpretation
-    st.divider()
-    if avg > 0:
-        if avg >= 13.5:
-            st.error(f"⚠️ **High Fall Risk** (เสี่ยงล้มสูง) — Avg {avg:.2f}s (>13.5s)")
+        # คำนวณค่าเฉลี่ย
+        trials = [t for t in [t1, t2, t3] if t > 0] # คิดเฉพาะช่องที่มีค่า
+        
+        if trials:
+            avg_time = sum(trials) / len(trials)
+            
+            st.markdown(f"""
+            <div class="result-box">
+                <h4>📊 Average Time</h4>
+                <h1 style="color:#1F618D; margin:0;">{avg_time:.2f} s</h1>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # แปลผล (Interpretation)
+            st.divider()
+            if avg_time >= 13.5:
+                st.error(f"⚠️ **High Fall Risk** (เสี่ยงล้มสูง)\n\nAvg: {avg_time:.2f} s (> 13.5 s)")
+            else:
+                st.success(f"✅ **Normal Mobility** (ปกติ)\n\nAvg: {avg_time:.2f} s (< 13.5 s)")
+                
+            st.info("ℹ️ **MDC:** ความเปลี่ยนแปลงที่สำคัญทางคลินิกคือ **3.6 วินาที**")
+            
         else:
-            st.success(f"✅ **Normal Mobility** (ปกติ) — Avg {avg:.2f}s")
+            st.info("กรุณากรอกข้อมูลเวลาอย่างน้อย 1 ช่องเพื่อคำนวณ")
